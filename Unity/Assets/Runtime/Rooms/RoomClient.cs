@@ -22,7 +22,11 @@ namespace Ubiq.Rooms
     public class RoomClient : MonoBehaviour, INetworkComponent
     {
         public IRoom Room { get => room; }
-
+        
+        /// <summary>
+        /// A reference to the Peer that represents this local player. Me will be the same reference through the life of the RoomClient.
+        /// It is valid after Awake() (can be used in Start()).
+        /// </summary>
         public IPeer Me { get => me; }
 
         /// <summary>
@@ -30,11 +34,6 @@ namespace Ubiq.Rooms
         /// a Room Code shared out of band.
         /// </summary>
         public List<IRoom> Available { get; private set; }
-
-        /// <summary>
-        /// Limits the refresh rate of the Available rooms.
-        /// </summary>
-        public float MaxGetRoomsRefreshRate = 2f;
 
         /// <summary>
         /// The Session Id identifies a persistent connection to a RoomServer. If the Session Id returned by the Room Server changes,
@@ -45,17 +44,17 @@ namespace Ubiq.Rooms
         /// <summary>
         /// Emitted when a Peer appears in the Room for the first time.
         /// </summary>
-        public PeerEvent OnPeerAdded;
+        public PeerEvent OnPeerAdded = new PeerEvent();
 
         /// <summary>
         /// Emitted when the properties of a Peer change.
         /// </summary>
-        public PeerEvent OnPeerUpdated;
+        public PeerEvent OnPeerUpdated = new PeerEvent();
 
         /// <summary>
         /// Emitted when a Peer goes out of scope (e.g. it leaves the room)
         /// </summary>
-        public PeerEvent OnPeerRemoved;
+        public PeerEvent OnPeerRemoved = new PeerEvent();
 
         /// <summary>
         /// Emitted when this peer has joined a room
@@ -63,22 +62,22 @@ namespace Ubiq.Rooms
         /// <remarks>
         /// There is no OnLeftRoom equivalent; leaving a room is the same as joining a new, empty room.
         /// </remarks>
-        public RoomEvent OnJoinedRoom;
+        public RoomEvent OnJoinedRoom = new RoomEvent();
 
         /// <summary>
         /// Emitted when a Room this peer is a member of has updated its properties
         /// </summary>
-        public RoomEvent OnRoomUpdated;
+        public RoomEvent OnRoomUpdated = new RoomEvent();
 
         /// <summary>
         /// Emitted when this peer attempts to join a room and is rejected
         /// </summary>
-        public RejectedEvent OnJoinRejected;
+        public RejectedEvent OnJoinRejected = new RejectedEvent();
 
         /// <summary>
-        /// Contains the latest list of rooms currently available on the server. Usually emitted in response to a discovery request.
+        /// Emitted in response to a discovery request
         /// </summary>
-        public RoomsAvailableEvent OnRoomsAvailable;
+        public RoomsDiscoveredEvent OnRoomsDiscovered = new RoomsDiscoveredEvent();
 
         /// <summary>
         /// A list of all the Peers in the Room. This does not include the local Peer, Me.
@@ -119,6 +118,8 @@ namespace Ubiq.Rooms
         private PeerInterfaceFriend me;
         private RoomInterfaceFriend room;
 
+        private List<Action> actions;
+        
         /// <summary>
         /// Contains the current Peers, indexed by UUID
         /// </summary>
@@ -273,42 +274,13 @@ namespace Ubiq.Rooms
 
         private void Awake()
         {
-            if (OnJoinedRoom == null)
-            {
-                OnJoinedRoom = new RoomEvent();
-            }
-            if (OnJoinRejected == null)
-            {
-                OnJoinRejected = new RejectedEvent();
-            }
-            if (OnPeerAdded == null)
-            {
-                OnPeerAdded = new PeerEvent();
-            }
-            if (OnPeerUpdated == null)
-            {
-                OnPeerUpdated = new PeerEvent();
-            }
-            if (OnPeerRemoved == null)
-            {
-                OnPeerRemoved = new PeerEvent();
-            }
-            if (OnRoomsAvailable == null)
-            {
-                OnRoomsAvailable = new RoomsAvailableEvent();
-            }
-            if (OnRoomUpdated == null)
-            {
-                OnRoomUpdated = new RoomEvent();
-            }
-
             blobCallbacks = new Dictionary<string, Action<string>>();
             room = new RoomInterfaceFriend();
             peers = new Dictionary<string, PeerInterfaceFriend>();
             Available = new List<IRoom>();
+            actions = new List<Action>();
 
             OnJoinedRoom.AddListener((room) => Debug.Log("Joined Room " + room.Name));
-            OnRoomsAvailable.AddListener((rooms) => Available = rooms);
 
             me = new PeerInterfaceFriend(Guid.NewGuid().ToString());
         }
@@ -330,11 +302,6 @@ namespace Ubiq.Rooms
         public void ProcessMessage(ReferenceCountedSceneGraphMessage message)
         {
             var container = JsonUtility.FromJson<Message>(message.ToString());
-            //foreach (var item in peers)
-            //{
-            //    Debug.Log(Time.unscaledTime + "Peer" + item.Key);
-            //}
-
             switch (container.type)
             {
                 case "SetRoom":
@@ -355,7 +322,6 @@ namespace Ubiq.Rooms
                         foreach (var uuid in peersToRemove)
                         {
                             var peer = peers[uuid];
-                           
                             peers.Remove(uuid);
                             OnPeerRemoved.Invoke(peer);
                         }
@@ -380,9 +346,10 @@ namespace Ubiq.Rooms
                         OnJoinRejected.Invoke(new Rejection()
                         {
                             reason = args.reason,
-                            joincode = args.requestArgs.joincode,
-                            name = args.requestArgs.name,
-                            publish = args.requestArgs.publish
+                            uuid = args.joinArgs.uuid,
+                            joincode = args.joinArgs.joincode,
+                            name = args.joinArgs.name,
+                            publish = args.joinArgs.publish
                         });
                     }
                     break;
@@ -391,10 +358,6 @@ namespace Ubiq.Rooms
                         var args = JsonUtility.FromJson<RoomInfo>(container.args);
                         if (room.Update(args))
                         {
-                            //foreach(var item in room)
-                            //{
-                            //    Debug.Log(Time.unscaledTime + "From Server" + item.Value);
-                            //}
                             OnRoomUpdated.Invoke(room);
                         }
                     }
@@ -432,17 +395,20 @@ namespace Ubiq.Rooms
                     break;
                 case "Rooms":
                     {
-                        var available = JsonUtility.FromJson<RoomsResponse>(container.args);
-                        if (roomClientVersion != available.version)
+                        var response = JsonUtility.FromJson<DiscoverRoomsResponse>(container.args);
+                        if (roomClientVersion != response.version)
                         {
-                            Debug.LogError($"Your version {roomClientVersion} of Ubiq doesn't match the server version {available.version}.");
+                            Debug.LogError($"Your version {roomClientVersion} of Ubiq doesn't match the server version {response.version}.");
                         }
                         var rooms = new List<IRoom>();
-                        for (int i = 0; i < available.rooms.Count; i++)
+                        for (int i = 0; i < response.rooms.Count; i++)
                         {
-                            rooms.Add((IRoom)available.rooms[i]);
+                            rooms.Add((IRoom)response.rooms[i]);
                         }
-                        OnRoomsAvailable.Invoke(rooms);
+                        var request = new RoomsDiscoveredRequest();
+                        request.joincode = response.request.joincode;
+
+                        OnRoomsDiscovered.Invoke(rooms,request);
                     }
                     break;
                 case "Blob":
@@ -470,7 +436,13 @@ namespace Ubiq.Rooms
         private void UpdatePeer(PeerInfo item)
         {
             PeerInterfaceFriend peer;
-            if (peers.TryGetValue(item.uuid, out peer))
+
+            if (item.uuid == me.UUID)
+            {
+                // We've already sent the event before updating the server
+                return;
+            }
+            else if (peers.TryGetValue(item.uuid, out peer))
             {
                 if (peer.Update(item))
                 {
@@ -491,19 +463,23 @@ namespace Ubiq.Rooms
         }
 
         /// <summary>
-        /// Creates a new room with the current settings on the server, and joins it.
+        /// Create a new room with the specified name and visibility
         /// </summary>
-        public void JoinNew(string name, bool publish)
+        /// <param name="name">The name of the new room</param>
+        /// <param name="bool">Whether others should be able to browse for this room</param>
+        public void Join(string name, bool publish)
         {
             me["creator"] = "1";
-            SendToServer("Join", new JoinRequest()
+            actions.Add(() =>
             {
-                joincode = "", // Empty joincode means request new room
-                name = name,
-                publish = publish,
-                peer = me.GetPeerInfo()
+                SendToServer("Join", new JoinRequest()
+                {
+                    name = name,
+                    publish = publish,
+                    peer = me.GetPeerInfo()
+                });
+                me.NeedsUpdate(); // This will clear the updated needed flag
             });
-            me.NeedsUpdate(); // This will clear the updated needed flag
         }
 
         /// <summary>
@@ -511,13 +487,33 @@ namespace Ubiq.Rooms
         /// </summary>
         public void Join(string joincode)
         {
-            me["creator"] = "0"; // not the creator of this room
-            SendToServer("Join", new JoinRequest()
+            me["creator"] = "0";
+            actions.Add(() =>
             {
-                joincode = joincode,
-                peer = me.GetPeerInfo()
+                SendToServer("Join", new JoinRequest()
+                {
+                    joincode = joincode,
+                    peer = me.GetPeerInfo()
+                });
+                me.NeedsUpdate();
             });
-            me.NeedsUpdate();
+        }
+
+        /// <summary>
+        /// Joins an existing room using a join code.
+        /// </summary>
+        public void Join(Guid guid)
+        {
+            me["creator"] = "0";
+            actions.Add(() =>
+            {
+                SendToServer("Join", new JoinRequest()
+                {
+                    uuid = guid.ToString(),
+                    peer = me.GetPeerInfo()
+                });
+                me.NeedsUpdate();
+            });
         }
 
         /// <summary>
@@ -528,9 +524,12 @@ namespace Ubiq.Rooms
         /// </remarks>
         public void Leave()
         {
-            SendToServer("Leave", new LeaveRequest()
+            actions.Add(() =>
             {
-                peer = me.GetPeerInfo()
+                SendToServer("Leave", new LeaveRequest()
+                {
+                    peer = me.GetPeerInfo()
+                });
             });
         }
 
@@ -547,18 +546,17 @@ namespace Ubiq.Rooms
 
         private void Update()
         {
+            actions.ForEach(a => a());
+            actions.Clear();
+
             if (me.NeedsUpdate())
             {
                 SendToServer("UpdatePeer", me.GetPeerInfo());
+                OnPeerUpdated.Invoke(me);
             }
 
             if (room.NeedsUpdate())
             {
-                //foreach (var item in room)
-                //{
-                //    Debug.Log(Time.unscaledTime + " To Server " + item.Value);
-
-                //}
                 SendToServer("UpdateRoom", room.GetRoomInfo());
             }
 
@@ -577,16 +575,12 @@ namespace Ubiq.Rooms
         }
 
         /// <summary>
-        /// Updates the Available list with the rooms currently running on the RoomServer.
-        /// This method is limited to MaxGetRoomsRefreshRate Hz, which can be set on this instance.
         /// </summary>
-        public void GetRooms()
+        public void DiscoverRooms(string joincode = "")
         {
-            if (Math.Abs(Time.realtimeSinceStartup - lastGetRoomsTime) > (1f / MaxGetRoomsRefreshRate))
-            {
-                SendToServer("RequestRooms", new RoomsRequest());
-                lastGetRoomsTime = Time.realtimeSinceStartup;
-            }
+            var request = new DiscoverRoomsRequest();
+            request.joincode = joincode;
+            SendToServer("DiscoverRooms", request);
         }
 
         /// <summary>
