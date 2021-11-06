@@ -50,13 +50,13 @@ namespace Ubiq.Avatars
             {
                 return playerAvatars.Values;
             }
-        }      
+        }
 
         public class AvatarDestroyEvent : UnityEvent<Avatar>
         {
         }
 
-        public class AvatarCreatedEvent : ListEvent<Avatar>
+        public class AvatarCreatedEvent : ExistingListEvent<Avatar>
         {
         }
 
@@ -82,7 +82,7 @@ namespace Ubiq.Avatars
             {
                 OnAvatarCreated = new AvatarCreatedEvent();
             }
-            OnAvatarCreated.SetList(playerAvatars.Values);
+            OnAvatarCreated.SetExisting(playerAvatars.Values);
 
             if(OnAvatarDestroyed == null)
             {
@@ -94,7 +94,7 @@ namespace Ubiq.Avatars
 
         private void Start()
         {
-            localAvatarId = NetworkScene.GenerateUniqueId(); 
+            localAvatarId = NetworkScene.GenerateUniqueId();
 
             RoomClient.OnPeerAdded.AddListener(UpdateAvatar);
             RoomClient.OnPeerUpdated.AddListener(UpdateAvatar);
@@ -145,7 +145,7 @@ namespace Ubiq.Avatars
 
             if (!id.Valid)
             {
-                return; 
+                return;
             }
 
             if (String.IsNullOrWhiteSpace(prefabUuid))

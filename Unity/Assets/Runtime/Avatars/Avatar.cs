@@ -36,9 +36,9 @@ namespace Ubiq.Avatars
         public NetworkId Id { get; set; } = NetworkId.Unique();
 
         /// <summary>
-        /// The Peer that the Avatar represents. Not all Avatar instances necessarily represent live peers - Avatars may be created to implement 
+        /// The Peer that the Avatar represents. Not all Avatar instances necessarily represent live peers - Avatars may be created to implement
         /// customisation interfaces, NPCs & crowds, or playback, for example.
-        /// Be mindful that some components, such as those above, may repurpose the UUID member. Do not assume a UUID, even if present, refers to 
+        /// Be mindful that some components, such as those above, may repurpose the UUID member. Do not assume a UUID, even if present, refers to
         /// a valid peer.
         /// </summary>
         /// <remarks>
@@ -49,7 +49,7 @@ namespace Ubiq.Avatars
         /// <summary>
         /// Emitted when the properties of the Peer this Avatar belongs to are updated.
         /// </summary>
-        public PeerEvent OnPeerUpdated;
+        public PeerUpdatedEvent OnPeerUpdated = new PeerUpdatedEvent();
 
         /// <summary>
         /// A dummy PeerInterface for local properties.
@@ -60,10 +60,10 @@ namespace Ubiq.Avatars
             {
             }
 
-            public string this[string key] 
-            { 
-                get => null; 
-                set => throw new NotImplementedException(); 
+            public string this[string key]
+            {
+                get => null;
+                set => throw new NotImplementedException();
             }
 
             public string UUID => null;
@@ -74,16 +74,12 @@ namespace Ubiq.Avatars
         private void Awake()
         {
             Peer = new AvatarPeerInterface();
-            if (OnPeerUpdated == null)
-            {
-                OnPeerUpdated = new PeerEvent();
-            }
-
         }
 
         public void SetPeer(IPeer peerInterface)
         {
             Peer = peerInterface;
+            OnPeerUpdated.SetExisting(peerInterface);
             if (hasStarted)
             {
                 Debug.LogError("Setting the Avatar Peer after Start() is not supported.");

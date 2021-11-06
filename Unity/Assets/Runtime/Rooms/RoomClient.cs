@@ -22,18 +22,12 @@ namespace Ubiq.Rooms
     public class RoomClient : MonoBehaviour, INetworkComponent
     {
         public IRoom Room { get => room; }
-        
+
         /// <summary>
         /// A reference to the Peer that represents this local player. Me will be the same reference through the life of the RoomClient.
         /// It is valid after Awake() (can be used in Start()).
         /// </summary>
         public IPeer Me { get => me; }
-
-        /// <summary>
-        /// The Rooms that are available for this client to Join. Clients can join rooms not on this list via
-        /// a Room Code shared out of band.
-        /// </summary>
-        public List<IRoom> Available { get; private set; }
 
         /// <summary>
         /// The Session Id identifies a persistent connection to a RoomServer. If the Session Id returned by the Room Server changes,
@@ -49,7 +43,7 @@ namespace Ubiq.Rooms
         /// <summary>
         /// Emitted when the properties of a Peer change.
         /// </summary>
-        public PeerEvent OnPeerUpdated = new PeerEvent();
+        public PeerUpdatedEvent OnPeerUpdated = new PeerUpdatedEvent();
 
         /// <summary>
         /// Emitted when a Peer goes out of scope (e.g. it leaves the room)
@@ -119,7 +113,7 @@ namespace Ubiq.Rooms
         private RoomInterfaceFriend room;
 
         private List<Action> actions;
-        
+
         /// <summary>
         /// Contains the current Peers, indexed by UUID
         /// </summary>
@@ -277,12 +271,12 @@ namespace Ubiq.Rooms
             blobCallbacks = new Dictionary<string, Action<string>>();
             room = new RoomInterfaceFriend();
             peers = new Dictionary<string, PeerInterfaceFriend>();
-            Available = new List<IRoom>();
             actions = new List<Action>();
 
             OnJoinedRoom.AddListener((room) => Debug.Log("Joined Room " + room.Name));
 
             me = new PeerInterfaceFriend(Guid.NewGuid().ToString());
+            OnPeerUpdated.SetExisting(me);
         }
 
         private void Start()
