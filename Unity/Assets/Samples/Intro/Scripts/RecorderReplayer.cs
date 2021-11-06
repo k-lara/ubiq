@@ -177,25 +177,19 @@ public class Replayer
     // later for the recording of other objects consider not only saving the networkid but additional info such as class
     // maybe save info in Dictionary list and save objectid (key) and values (list: class, (if avatar what avatar type + texture info)
     private Dictionary<NetworkId, string> replayedObjectids; // avatar IDs and texture
-    //public Dictionary<NetworkId, ReplayedObjectProperties> replayedAvatars; // new objectids for avatars only! 
     public Dictionary<NetworkId, ReplayedObjectProperties> replayedObjects; // new objectids for all other objects! 
     private Dictionary<NetworkId, NetworkId> oldNewIds;
     private bool loadingStarted = false; // set to true once loading recorded data starts
     private bool loaded = false;
-    //private bool loaded = false; // set to true once all recorded data is loaded
-    //private int msgIndex = 0; // for replaying from file where every msg is in separate line to get correct index for messages in next frame
     private FileStream streamFromFile;
-    private bool avatarsCreated = false;
     private bool objectsCreated = false;
     private bool opened = false;
-    private bool showAvatarsFromStart = false;
  
     public Replayer(RecorderReplayer recRep)
     {
         this.recRep = recRep;
 
         replayedObjectids = new Dictionary<NetworkId, string>();
-        //replayedAvatars = new Dictionary<NetworkId, ReplayedObjectProperties>();
         replayedObjects = new Dictionary<NetworkId, ReplayedObjectProperties>();
         oldNewIds = new Dictionary<NetworkId, NetworkId>();
         spawner = recRep.spawner;
@@ -261,7 +255,6 @@ public class Replayer
                 {
                     HideAll();
                     recRep.currentReplayFrame = 0;
-                    showAvatarsFromStart = false;
                     streamFromFile.Position = 0;
                     while (recRep.currentReplayFrame < recRep.sliderFrame)
                     {
@@ -291,7 +284,6 @@ public class Replayer
         {
             recRep.currentReplayFrame = 0;
             HideAll();
-            showAvatarsFromStart = false;
             streamFromFile.Position = 0;
             recRep.replayingStartTime = 0.0f;
             recRep.stopTime = 0.0f;
@@ -299,36 +291,6 @@ public class Replayer
         }
         recRep.sliderFrame = recRep.currentReplayFrame;
     }
-
-    //private bool CreateRecordedAvatars()
-    //{
-    //    for (var i = 0; i < recInfo.objectids.Count; i++)
-    //    {
-    //        var objectid = recInfo.objectids[i];
-    //        var uuid = recInfo.textures[i];
-    //        ReplayedObjectProperties props = new ReplayedObjectProperties();
-            
-    //        // if different avatar types are used for different clients change this!
-    //        GameObject prefab = spawner.catalogue.prefabs[3]; // Spawnable Floating BodyA Avatar
-    //        GameObject go = spawner.SpawnPersistentReplay(prefab, uuid); // this game object has network context etc. (not the prefab)
-    //        Avatar avatar = go.GetComponent<Avatar>(); // spawns invisible avatar
-    //        props.hider = go.GetComponent<ObjectHider>();
-    //        Debug.Log("CreateRecordedAvatars() " + avatar.Id);
-
-    //        oldNewIds.Add(objectid, avatar.Id);
-    //        Debug.Log(objectid.ToString() + " new: " + avatar.Id.ToString());
-
-    //        props.gameObject = go;
-    //        props.id = avatar.Id;
-    //        INetworkComponent[] components = go.GetComponents<INetworkComponent>();
-    //        foreach (var comp in components)
-    //        {
-    //            props.components.Add(NetworkScene.GetComponentId(comp), comp);
-    //        }
-    //        replayedAvatars.Add(avatar.Id, props);
-    //    }
-    //    return true;
-    //}
 
     private bool CreateRecordedObjects()
     {
@@ -342,14 +304,6 @@ public class Replayer
             {
                 continue;
             }
-            //if (prefab.GetComponent<TexturedAvatar>() != null) // object is an avatar, so it has a saved texture
-            //{
-            //    uid = textures[objectid];
-            //}
-            //else if (prefab.GetComponent<TexturedObject>() != null)
-            //{
-            //    uid = textures[objectid];
-            //}
             GameObject go = spawner.SpawnPersistentReplay(prefab, false, uid, true, new TransformMessage(recRep.thisTransform));
 
             ReplayedObjectProperties props = new ReplayedObjectProperties();
@@ -357,7 +311,7 @@ public class Replayer
             Debug.Log("CreateRecordedObjects():  " + go.name);
             NetworkId newId = go.GetComponent<INetworkObject>().Id;
             oldNewIds.Add(objectid, newId);
-            Debug.Log(objectid.ToString() + " new: " + newId.ToString());
+            //Debug.Log(objectid.ToString() + " new: " + newId.ToString());
             props.gameObject = go;
             props.id = newId;
             INetworkComponent[] components = go.GetComponentsInChildren<INetworkComponent>();
@@ -381,7 +335,6 @@ public class Replayer
             Debug.Log("Load info...");
             recInfo = await LoadRecInfo(filepath);
             Debug.Log(recInfo.frames + " " + recInfo.frameTimes.Count + " " + recInfo.pckgSizePerFrame.Count);
-            //avatarsCreated = CreateRecordedAvatars();
             objectsCreated = CreateRecordedObjects();
             Debug.Log("Info loaded!");
         }
@@ -409,7 +362,6 @@ public class Replayer
     private bool OpenStream(string filepath)
     {
         streamFromFile = File.Open(filepath, FileMode.Open); // dispose once replaying is done
-        //recRep.replayingStartTime = Time.unscaledTime;
         recRep.replayingStartTime = 0.0f;
         return true;
     }
@@ -428,27 +380,6 @@ public class Replayer
 
         return recInfo;
     }
-
-    //private async Task<bool> LoadMessages(string filepath)
-    //{
-    //    using (FileStream stream = File.Open(filepath, FileMode.Open))
-    //    {
-    //        int i = 0;
-    //        replayedFrames = new int[recInfo.frames];
-    //        byte[] msgs;
-    //        replayedMessages = new ReferenceCountedSceneGraphMessage[recInfo.frames][];
-    //        while (i < recInfo.frames)
-    //        {
-    //            msgs = new byte[recInfo.pckgSizePerFrame[i]];
-    //            await stream.ReadAsync(msgs, 0, msgs.Length);
-
-    //            MessagePack mp = new MessagePack(msgs);
-    //            replayedMessages[i] = CreateRCSGMs(mp);
-    //            i++;
-    //        }
-    //    }
-    //    return true;
-    //}
 
     private ReferenceCountedSceneGraphMessage[] CreateRCSGMs(MessagePack messagePack)
     {
@@ -523,27 +454,6 @@ public class Replayer
         }
     }
 
-    //private void ReplayMessagesPerFrame()
-    //{
-    //    Debug.Log("Replay messages...");
-
-    //    foreach (var message in replayedMessages[recRep.currentReplayFrame])
-    //    {
-    //        ReplayedObjectProperties props = replayedAvatars[message.objectid];
-    //        INetworkComponent component = props.components[message.componentid];
-
-    //        // send and replay remotely
-    //        recRep.scene.Send(message);
-
-    //        // replay locally
-    //        component.ProcessMessage(message);
-
-    //    }
-    //    //msgIndex = msgIndex + msgsPerFrame;
-    //    recRep.currentReplayFrame++;
-    //    //Debug.Log(currentReplayFrame + " " + msgIndex);
-    //}
-
     public void Cleanup(bool unspawn)
     {
         
@@ -553,7 +463,7 @@ public class Replayer
             Debug.Log("Cleanup ids old: " + i.Key + " new: " + i.Value);
         }
 
-        loadingStarted = loaded = avatarsCreated = objectsCreated = showAvatarsFromStart = false;
+        loadingStarted = loaded = objectsCreated = false;
         recRep.play = true;
         recRep.currentReplayFrame = 0;
         recRep.sliderFrame = 0;
@@ -572,8 +482,6 @@ public class Replayer
                 spawner.UnspawnPersistent(ids);
             }
         }
-
-        //replayedAvatars.Clear();
         replayedObjects.Clear();
         oldNewIds.Clear();
         recInfo = null;
@@ -635,7 +543,6 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
         return roomClient.Me["creator"] == "1";
     }
 
-    // Use Awake() because 
     void Awake()
     {
         //Application.targetFrameRate = 60;

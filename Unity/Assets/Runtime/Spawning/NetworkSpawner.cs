@@ -10,10 +10,6 @@ using Ubiq.Samples;
 
 namespace Ubiq.Spawning
 {
-    public interface IUnspawnable
-    {
-        void Unspawn(bool remove);
-    }
     public interface ISpawnable
     {
         NetworkId Id { set; }
@@ -135,10 +131,6 @@ namespace Ubiq.Spawning
                     //go.GetComponent<Outliner>().SetOutline(true); // every object/avatar that can be replayed should have this to distinguish them from the real deal
                 }
             }
-            //else
-            //{
-
-            //}
             Debug.Log("visible is " + visible);
             if (visible)
             {
@@ -227,7 +219,7 @@ namespace Ubiq.Spawning
 
         public void UnspawnPersistent(NetworkId networkId)
         {
-            context.SendJson(new Message() { networkId = networkId, remove = true});
+            context.SendJson(new Message() { networkId = networkId, remove = true}); // is this necessary? no right
             var key = $"SpawnedObject-{ networkId }";
             // if OnLeftRoom is called too the objects are destroyed there and not here
             if (spawned.ContainsKey(networkId))
