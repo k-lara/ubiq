@@ -12,7 +12,7 @@ using Ubiq.Samples;
 public class PuzzleMenu : MonoBehaviour
 {
     public ImageCatalogue catalogue;
-    public MainMenu mainMenu;
+    public SocialMenu socialMenu;
     public GameObject mainPanel; // where the record/replay menu is
 
     public Puzzle puzzle1;
@@ -155,7 +155,7 @@ public class PuzzleMenu : MonoBehaviour
         scene = NetworkScene.FindNetworkScene(this);
         roomClient = scene.GetComponent<RoomClient>();
         avatarManager = scene.GetComponentInChildren<AvatarManager>();
-        mainMenu.OnIndicatorSpawned.AddListener(OnMenuIndicatorSpawned);
+        socialMenu.OnIndicatorSpawned.AddListener(OnMenuIndicatorSpawned);
     }
 
     // Update is called once per frame
