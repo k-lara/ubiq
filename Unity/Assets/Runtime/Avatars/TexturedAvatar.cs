@@ -73,7 +73,7 @@ namespace Ubiq.Samples
         }
 
         /// <summary>
-        /// Try to set the Texture by reference to a Texture in the Catalogue. If the Texture is not in the 
+        /// Try to set the Texture by reference to a Texture in the Catalogue. If the Texture is not in the
         /// catalogue then this method has no effect, as Texture2Ds cannot be streamed yet.
         /// </summary>
         public void SetTexture(Texture2D texture)
@@ -117,7 +117,7 @@ namespace Ubiq.Samples
                 if(avatar.IsLocal)
                 {
                     avatar.Peer["ubiq.avatar.texture.uuid"] = this.uuid;
-                }                
+                }
 
                 if (avatar.IsLocal && SaveTextureSetting)
                 {

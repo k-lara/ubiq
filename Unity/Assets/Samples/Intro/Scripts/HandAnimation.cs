@@ -43,7 +43,7 @@ public class HandAnimation : MonoBehaviour, INetworkComponent
     {
         context = NetworkScene.Register(this);
         avatar = GetComponent<Avatar>();
-        
+
     }
 
     // Update is called once per frame
@@ -62,7 +62,7 @@ public class HandAnimation : MonoBehaviour, INetworkComponent
             context.SendJson(new Message(gripTargetLeft, gripTargetRight)); // sent every frame currently...put into if() ?
             //Debug.Log("Anim: " + gripCurrent + " " + gripTarget);
         }
-        
+
         if (gripCurrentLeft != gripTargetLeft)
         {
             gripCurrentLeft = Mathf.MoveTowards(gripCurrentLeft, gripTargetLeft, Time.deltaTime * speed);
