@@ -302,6 +302,7 @@ public class Replayer
             GameObject prefab = spawner.catalogue.GetPrefab(prefabName);
             if (prefab == null)
             {
+                Debug.Log("Continue: " + objectid.ToString() + " " + prefabName);
                 continue;
             }
             GameObject go = spawner.SpawnPersistentReplay(prefab, false, uid, true, new TransformMessage(recRep.thisTransform));
@@ -311,7 +312,7 @@ public class Replayer
             Debug.Log("CreateRecordedObjects():  " + go.name);
             NetworkId newId = go.GetComponent<INetworkObject>().Id;
             oldNewIds.Add(objectid, newId);
-            //Debug.Log(objectid.ToString() + " new: " + newId.ToString());
+            Debug.Log(objectid.ToString() + " new: " + newId.ToString());
             props.gameObject = go;
             props.id = newId;
             INetworkComponent[] components = go.GetComponentsInChildren<INetworkComponent>();

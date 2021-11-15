@@ -11,37 +11,83 @@ using Ubiq.Samples;
 public class RecorderReplayerMenu : MonoBehaviour
 {
     public NetworkScene scene;
-    private RoomClient roomClient;
     public Sprite playSprite;
     public Sprite pauseSprite;
-    public GameObject buttonPrefab;
-    public GameObject recordBtn;
-    public GameObject replayBtn;
+    
+    public GameObject buttonPrefab; // for scroll view content
 
-    private Image recordImage;
-    private Image replayImage;
+    public Button recordReplayButtonMain;
+    public GameObject recordBtn; // Buttons Panel (top left)
+    public Image recordImage;
+    public Text recordText;
+    public GameObject replayBtn;
+    private Button replayButton;
+    public Image replayImage;
+    public Text replayText;
+    public GameObject playPauseBtn;
+    private Button playPauseButton;
+    public Image playPauseImage;
+    public Text playPauseText;
+    public Text currentReplayFileName; // Current Replay File (top right)
+    public Slider slider; // Slider Panel (middle)
+    public Text sliderText;
+    public GameObject content; // Scroll View (bottom)
+
+    private Color white = new Color(0.937f, 0.937f, 0.937f, 1.0f);
 
     private PanelSwitcher panelSwitcher;
+    private EventTrigger trigger; // for changing the slider value
 
     private RecorderReplayer recRep;
-    private GameObject sliderPanel;
-    private Slider slider;
-    private Text sliderText;
-    private GameObject filePanel;
-    private GameObject scrollView;
-    private Text fileText;
+    private RoomClient roomClient;
     private DirectoryInfo dir;
-
-    private EventTrigger trigger;
 
     private List<string> recordings;
     private List<string> newRecordings;
-
     private bool infoSet = false;
     private bool loaded = false;
     private bool needsUpdate = true;
     private bool resetReplayImage = false; // in case we loaded an invalid file path
 
+    private List<Button> replayFileButtons;
+
+    void Start()
+    {
+        panelSwitcher = GetComponentInParent<PanelSwitcher>();
+        panelSwitcher.OnPanelSwitch.AddListener(OnPanelSwitch);
+        playPauseButton = playPauseBtn.GetComponent<Button>();
+        playPauseButton.interactable = false;
+        replayButton = replayBtn.GetComponent<Button>();
+        replayButton.interactable = false; // when no replay file is selected replay is not possible
+        slider.interactable = false;
+
+        recordings = new List<string>(); // recordings that are shown in scroll view
+        newRecordings = new List<string>(); // new recordings that have been added since app start
+        replayFileButtons = new List<Button>(); // buttons showing the recordings in the scroll view
+
+        Debug.Log("Set RecorderReplayer in Menu");
+        recRep = scene.GetComponent<RecorderReplayer>();
+
+        // Changing slider value (adds trigger behaviour)
+        trigger = slider.gameObject.GetComponent<EventTrigger>();
+        EventTrigger.Entry entry = new EventTrigger.Entry();
+        entry.eventID = EventTriggerType.PointerUp;
+        entry.callback.AddListener((data) => { OnPointerUpDelegate((PointerEventData)data); });
+        trigger.triggers.Add(entry);
+        //EventTrigger.Entry entry = new EventTrigger.Entry();
+        //entry.eventID = EventTriggerType.EndDrag;
+        //entry.callback.AddListener((data) => { OnEndDrag((PointerEventData)data); });
+        //trigger.triggers.Add(entry);
+
+        roomClient = scene.GetComponent<RoomClient>();
+        roomClient.OnPeerUpdated.AddListener(OnPeerUpdated);
+        roomClient.OnPeerAdded.AddListener(OnPeerAdded);
+        roomClient.OnJoinedRoom.AddListener(OnJoinedRoom);
+
+        GetReplayFilesFromDir();
+        AddReplayFiles();
+    }
+   
     public void OnPeerAdded(IPeer peer)
     {
         Debug.Log("Menu: OnPeerAdded");
@@ -53,7 +99,7 @@ public class RecorderReplayerMenu : MonoBehaviour
     {
         if (roomClient.Me["creator"] == "1")
         {
-            GetReplayFiles();
+            GetReplayFilesFromDir();
         }
     }
 
@@ -70,26 +116,28 @@ public class RecorderReplayerMenu : MonoBehaviour
         if (peer["creator"] == "1")
         {
             Debug.Log("Menu: creator");
-            recordBtn.SetActive(true);
-            replayBtn.SetActive(true);
+            recordReplayButtonMain.interactable = true;
+            //recordBtn.SetActive(true);
+            //replayBtn.SetActive(true);
             // set color of record/replay button back to gray in case of ongoing recording/replaying
             if (!recRep.recording)
             {
-                recordImage.color = new Color(0.5f, 0.5f, 0.5f, 1.0f);
+                recordImage.color = white;
+                recordText.color = white;
 
             }
             if (!recRep.replaying)
             {
-                filePanel.SetActive(true);
-                replayImage.color = new Color(0.5f, 0.5f, 0.5f, 1.0f);
+                replayImage.color = white;
+                replayText.color = white;
             }
         }
         else
         {
             Debug.Log("Menu: NOT creator");
-            recordBtn.SetActive(false);
-            replayBtn.SetActive(false);
-            filePanel.SetActive(false);
+            recordReplayButtonMain.interactable = false;
+            //recordBtn.SetActive(false);
+            //replayBtn.SetActive(false);
         }
     }
 
@@ -107,55 +155,12 @@ public class RecorderReplayerMenu : MonoBehaviour
         }
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        panelSwitcher = GetComponent<PanelSwitcher>();
-        panelSwitcher.OnPanelSwitch.AddListener(OnPanelSwitch);
-
-        recordings = new List<string>();
-        newRecordings = new List<string>();
-        replayImage = replayBtn.transform.Find("Icon").gameObject.GetComponent<Image>();
-        recordImage = recordBtn.transform.Find("Icon").gameObject.GetComponent<Image>();
-
-        // this is not ideal if menu hierarchy changes forgive me but it does the job for now
-        filePanel = gameObject.transform.GetChild(0).GetChild(2).GetChild(1).gameObject;
-        scrollView = filePanel.transform.GetChild(0).gameObject;
-        fileText = filePanel.transform.GetChild(1).GetChild(0).gameObject.GetComponent<Text>();
-        fileText.text = "Replay: " + "none";
-
-        Debug.Log("Set RecorderReplayer in Menu");
-        recRep = scene.GetComponent<RecorderReplayer>();
-
-        sliderPanel = gameObject.transform.Find("Slider Panel").gameObject;
-        slider = sliderPanel.GetComponentInChildren<Slider>();
-        sliderText = sliderPanel.GetComponentInChildren<Text>();
-        trigger = slider.gameObject.GetComponent<EventTrigger>();
-        EventTrigger.Entry entry = new EventTrigger.Entry();
-        entry.eventID = EventTriggerType.PointerUp;
-        entry.callback.AddListener((data) => { OnPointerUpDelegate((PointerEventData)data); });
-        trigger.triggers.Add(entry);
-        //EventTrigger.Entry entry = new EventTrigger.Entry();
-        //entry.eventID = EventTriggerType.EndDrag;
-        //entry.callback.AddListener((data) => { OnEndDrag((PointerEventData)data); });
-        //trigger.triggers.Add(entry);
-
-        roomClient = scene.GetComponent<RoomClient>();
-        roomClient.OnPeerUpdated.AddListener(OnPeerUpdated);
-        roomClient.OnPeerAdded.AddListener(OnPeerAdded);
-        roomClient.OnJoinedRoom.AddListener(OnJoinedRoom);
-
-
-
-        GetReplayFiles();
-    }
-
     public void OnPointerUpDelegate(PointerEventData data)
     {
         SetReplayFrame();
     }
 
-    private void GetReplayFiles()
+    private void GetReplayFilesFromDir()
     {
         recordings.Clear();
         try
@@ -174,18 +179,8 @@ public class RecorderReplayerMenu : MonoBehaviour
             Debug.LogError(e.ToString());
         }
     }
-
-    private void SelectReplayFile(string file)
+    public void AddReplayFiles()
     {
-        recRep.replayFile = file;
-        fileText.text = "Replay: " + file;
-    }
-
-    // called when "select replay" is clicked
-    public void ShowReplayFiles(GameObject content)
-    {
-        Debug.Log("Show replay files");
-        scrollView.SetActive(!scrollView.activeSelf);
         if(!loaded)
         {
             Debug.Log("Add all files");
@@ -201,40 +196,49 @@ public class RecorderReplayerMenu : MonoBehaviour
             needsUpdate = false;
             newRecordings.Clear();
         }
-    
     }
-
-    private void CloseFileWindow(GameObject content)
-    {
-        content.transform.parent.parent.gameObject.SetActive(false);
-        scrollView.SetActive(false);
-    }
-
     private void AddFiles(List<string> recordings, GameObject content)
     {
         foreach (var file in recordings)
         {
             GameObject go = Instantiate(buttonPrefab, content.transform);
-            go.GetComponent<Button>().onClick.AddListener(delegate { SelectReplayFile(file); } );
-            go.GetComponent<Button>().onClick.AddListener(delegate { CloseFileWindow(content); });
+            var button = go.GetComponent<Button>();
+            button.onClick.AddListener(delegate { SelectReplayFile(file); } );
+            //go.GetComponent<Button>().onClick.AddListener(delegate { CloseFileWindow(content); });
+            replayFileButtons.Add(button);
 
             Text t = go.GetComponentInChildren<Text>();
             t.text = file;
         }
     }
 
-    public void ToggleRecord()
+    private void SelectReplayFile(string file)
     {
-        //Image img = icon.GetComponent<Image>();
-        
+        recRep.replayFile = file;
+        currentReplayFileName.text = file;
+        replayButton.interactable = true;
+    }
+
+    private void EnableReplayFileSelection(bool isEnabled)
+    {
+        foreach (var button in replayFileButtons)
+        {
+            button.interactable = isEnabled;
+        }
+    }
+
+    public void ToggleRecord()
+    {        
         if (recRep.recording) // if recording stop it
         {
             EndRecordingAndCleanup();
+            AddReplayFiles();
         }
         else // start recording
         {
             Debug.Log("Toggle Record");
             recordImage.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
+            recordText.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
             recRep.recording = true;
         }
         
@@ -249,15 +253,15 @@ public class RecorderReplayerMenu : MonoBehaviour
         newRecordings.Add(rec);
         needsUpdate = true;
 
-        recordImage.color = new Color(0.5f, 0.5f, 0.5f, 1.0f);
+        recordImage.color = white;
+        recordText.color = white;
         if (recRep.replaying)
         {
-            filePanel.SetActive(true);
-            sliderPanel.SetActive(false);
+            slider.interactable = false;
         }
         recRep.recording = false;
         recRep.replayFile = rec; // is probably set twice (in RecorderReplayer SetReplayFile() too)
-        fileText.text = "Replay: " + rec;
+        currentReplayFileName.text = rec;
         infoSet = false;
     }
 
@@ -269,12 +273,16 @@ public class RecorderReplayerMenu : MonoBehaviour
         if (recRep.replaying) // if replaying stop it
         {
             EndReplayAndCleanup();
+            EnableReplayFileSelection(true);
         }
         else // start replaying
         {
-            sliderPanel.SetActive(true);
-            filePanel.SetActive(false);
+            EnableReplayFileSelection(false);
+            slider.interactable = false;
+            sliderText.text = "";
+            playPauseButton.interactable = true; // only clickable during replay
             replayImage.color = new Color(0.0f, 0.8f, 0.2f, 1.0f);
+            replayText.color = new Color(0.0f, 0.8f, 0.2f, 1.0f);
             recRep.replaying = true;
             resetReplayImage = true;
             slider.minValue = 0;
@@ -283,32 +291,34 @@ public class RecorderReplayerMenu : MonoBehaviour
 
     private void EndReplayAndCleanup()
     {
-        sliderPanel.SetActive(false);
-        filePanel.SetActive(true);
-        replayImage.color = new Color(0.5f, 0.5f, 0.5f, 1.0f);
+        slider.interactable = false;
+        replayImage.color = white;
+        replayText.color = white;
         recRep.replaying = false;
         resetReplayImage = false;
+        playPauseButton.interactable = false;
+
         if (!recRep.play)
         {
             // when replay is initialised again the correct sprite is visible in the slider panel
-            var setToPause = sliderPanel.transform.GetChild(1).GetChild(0).gameObject.GetComponent<Image>();
-            setToPause.sprite = pauseSprite;
+            playPauseImage.sprite = pauseSprite;
+            playPauseText.text = "Pause";
         }
     }
 
-    public void PlayPauseReplay(GameObject icon)
-    {
-        Image img = icon.GetComponent<Image>();
-        
+    public void PlayPauseReplay()
+    {        
         if (recRep.play) // if playing pause it
         {
-            img.sprite = playSprite;
+            playPauseImage.sprite = playSprite;
+            playPauseText.text = "Play";
             recRep.play = false;
             slider.interactable = true;
         }
         else // resume
         {
-            img.sprite = pauseSprite;
+            playPauseImage.sprite = pauseSprite;
+            playPauseText.text = "Pause";
             recRep.play = true;
             slider.interactable = false;
         }
@@ -358,16 +368,11 @@ public class RecorderReplayerMenu : MonoBehaviour
             infoSet = false;
             if(resetReplayImage)
             {
-                replayImage.color = new Color(0.5f, 0.5f, 0.5f, 1.0f);
+                replayImage.color = white;
+                replayText.color = white;
                 resetReplayImage = false;
-                sliderPanel.SetActive(false);
-                filePanel.SetActive(true);
+                slider.interactable = false;
             }
         }
     }
-
-    //public void OnEndDrag(PointerEventData eventData)
-    //{
-    //    Debug.Log("OnEndDrag");
-    //}
 }
