@@ -14,6 +14,7 @@ namespace Ubiq.Voip
         // IAudioSink implementation starts
         // Thread safe and can be called before Awake() and after OnDestroy()
         public event SourceErrorDelegate OnAudioSinkError = delegate {};
+
         public List<AudioFormat> GetAudioSinkFormats() => audioFormatManager?.GetSourceFormats();
         public void SetAudioSinkFormat(AudioFormat audioFormat) => audioFormatManager?.SetSelectedFormat(audioFormat);
         public void RestrictFormats(Func<AudioFormat, bool> filter) => audioFormatManager?.RestrictFormats(filter);
@@ -72,6 +73,8 @@ namespace Ubiq.Voip
         // Fixed bitrate of 64kbps, relatively high
         private class RtpBufferer
         {
+            // for recording:
+            public event RawAudioSampleDelegate OnAudioSourceRawSample = delegate {};
             public G722AudioDecoder decoder { get; private set; }
             public int latencySamples { get; private set; }
             public int syncSamples { get; private set; }
@@ -169,6 +172,7 @@ namespace Ubiq.Voip
 
                     // TODO pool buffers to avoid runtime GC
                     var pcms = decoder.Decode(rtp.payload);
+                    OnAudioSourceRawSample.Invoke(AudioSamplingRatesEnum.Rate16KHz, (uint)(pcms.Length / 16), pcms);
                     var floatPcms = new float[pcms.Length];
 
                     for (int pcmi = 0; pcmi < pcms.Length; pcmi++)
@@ -266,6 +270,10 @@ namespace Ubiq.Voip
 
         private RtpBufferer rtpBufferer;
 
+        // for recording:
+        public event RawAudioSampleDelegate OnAudioSourceRawSample = delegate { };
+
+
         private void Awake()
         {
             unityAudioSource = gameObject.AddComponent<AudioSource>();
@@ -280,6 +288,12 @@ namespace Ubiq.Voip
             unityAudioSource.Play();
 
             rtpBufferer = new RtpBufferer(latencySamples,syncSamples);
+            rtpBufferer.OnAudioSourceRawSample += RtpBufferer_OnAudioSourceRawSample;
+        }
+
+        private void RtpBufferer_OnAudioSourceRawSample(AudioSamplingRatesEnum samplingRate, uint durationMilliseconds, short[] sample)
+        {
+            OnAudioSourceRawSample.Invoke(samplingRate, durationMilliseconds, sample);
         }
 
         private void OnDestroy()

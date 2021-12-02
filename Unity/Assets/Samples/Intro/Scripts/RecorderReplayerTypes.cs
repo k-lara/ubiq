@@ -7,6 +7,42 @@ using Ubiq.Messaging;
 
 namespace RecorderReplayerTypes {
     
+    
+    public class AudioMessagePack
+    {
+        public byte[] uuid;
+        public List<byte[]> samples = new List<byte[]>();
+
+        public AudioMessagePack(short uuid) 
+        { 
+            this.uuid = BitConverter.GetBytes(uuid); 
+        }
+
+        public void Add(short[] samples) 
+        {
+            byte[] bSamples = new byte[samples.Length * 2];
+            for (var i = 0; i < samples.Length; i++)
+            {
+                Buffer.BlockCopy(BitConverter.GetBytes(samples[i]), 0, bSamples, i * 2, 2);
+            }
+            this.samples.Add(bSamples); 
+        }
+
+        public void Clear() { samples.Clear();  }
+
+        // convert gathered samples into package [length [4 byte], uuid [2 byte], samples [2 * samples.length bytes]]
+        public byte[] GetBytes()
+        {
+            byte[] samplesArr = samples.SelectMany(a => a).ToArray();
+            byte[] byteMsg = new byte[ samplesArr.Length + 2 + 4];
+            Buffer.BlockCopy(BitConverter.GetBytes(samplesArr.Length + 2), 0, byteMsg, 0, 4); // length of audio message pack (int)
+            Buffer.BlockCopy(uuid, 0, byteMsg, 4, 2); // uuid (short)
+            Buffer.BlockCopy(samplesArr, 0, byteMsg, 6, samplesArr.Length); // samples
+            return byteMsg;
+        }
+
+    }
+    
     /// <summary>
     /// A MessagePack contains all the messages (SingleMessages) that are recorded in one frame.
     /// </summary>
@@ -54,7 +90,7 @@ namespace RecorderReplayerTypes {
 
         }
     }
-    // Kind of obsolete if I think about it... it just encapsulates the ReferenceCountedSceneGraphMessage
+    // Kind of obsolete when I think about it... it just encapsulates the ReferenceCountedSceneGraphMessage
     public class SingleMessage
     {
         public byte[] message; // whole message including object and component ids
@@ -88,6 +124,8 @@ namespace RecorderReplayerTypes {
     {
         public int[] listLengths; // frameTimes.Count, pckSizePerFrame.Count, idxFrameStart.Count
         public int frames;
+        public List<string> peerUuids;
+        public List<short> uuidToShort;
         public int numberOfObjects;
         public List<NetworkId> objectids; // objectids from prefabs (unnecessary?)
         public List<string> textures; // textures
@@ -96,12 +134,14 @@ namespace RecorderReplayerTypes {
         public List<int> pckgSizePerFrame;
         public List<long> idxFrameStart; // long! index could get extremely high
 
-        public RecordingInfo(int frames, int numberOfObjects, 
+        public RecordingInfo(int frames, List<string> peerUuids, List<short> uuidToShort, int numberOfObjects, 
             List<NetworkId> objectids, List<string> textures, List<string> prefabs, 
             List<float> frameTimes, List<int> pckgSizePerFrame, List<long> idxFrameStart)
         {
             listLengths = new int[3] { frameTimes.Count, pckgSizePerFrame.Count, idxFrameStart.Count };
             this.frames = frames;
+            this.peerUuids = peerUuids;
+            this.uuidToShort = uuidToShort;
             this.numberOfObjects = numberOfObjects;
             this.objectids = objectids;
             this.textures = textures;

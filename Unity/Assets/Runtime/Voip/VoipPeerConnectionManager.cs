@@ -84,9 +84,9 @@ namespace Ubiq.Voip
             public List<IceServerDetails> servers = new List<IceServerDetails>();
         }
 
-        private VoipMicrophoneInput audioSource;
+        public VoipMicrophoneInput audioSource { get; private set; } // sorry for making it public
         private RoomClient client;
-        private Dictionary<string, VoipPeerConnection> peerUuidToConnection;
+        public Dictionary<string, VoipPeerConnection> peerUuidToConnection { get; private set; } // sorry again
         private NetworkContext context;
 
         private RTCPeerConnectionSource peerConnectionSource;

@@ -13,7 +13,6 @@ namespace Ubiq.Spawning
 
         public void OnEnable()
         {
-            prefabs[0].
             if (prefabs != null)
             {
                 foreach (var prefab in prefabs)

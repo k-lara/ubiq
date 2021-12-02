@@ -215,6 +215,7 @@ namespace Ubiq.Voip
                     pcmSamples[i] = (short)(floatSample * short.MaxValue);
                 }
 
+                OnAudioSourceRawSample.Invoke(AudioSamplingRatesEnum.Rate16KHz, (uint)(pcmSamples.Length / 16), pcmSamples);
                 var encoded = audioEncoder.Encode(pcmSamples);
                 OnAudioSourceEncodedSample.Invoke((uint)pcmSamples.Length,encoded);
             }

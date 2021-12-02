@@ -13,15 +13,18 @@ using Ubiq.Spawning;
 using Ubiq.Rooms;
 using Ubiq.Samples;
 using RecorderReplayerTypes;
+using Ubiq.Voip;
 
 public class Recorder
 {
     // Recording
+    public event EventHandler OnRecordingStopped;
+
     private RecorderReplayer recRep;
 
     private BinaryWriter binaryWriter;
     private string recordFileIDs; // save the objectIDs of the recorded avatars
-    
+
     private int frameNr = 0;
     private int previousFrame = 0;
     private Dictionary<NetworkId, string> textures; // textures
@@ -41,8 +44,10 @@ public class Recorder
         recordedObjectIds = new Dictionary<NetworkId, string>();
         pckgSizePerFrame = new List<int>();
         idxFrameStart = new List<long>();
-
     }
+
+    public int GetFrameNr() { return frameNr; }
+
     // so we know how many of the messages belonge to one frame,
     // this is called after all connections have received their messages after one Update()
     public void NextFrame()
@@ -56,7 +61,9 @@ public class Recorder
         Debug.Log("Recording...");
         return recRep.recording;
     }
-    
+
+    // prepare recording file
+    // data structure for file 
     public void RecordMessage(INetworkObject obj, ReferenceCountedSceneGraphMessage message)
     {
         if (!initFile)
@@ -137,12 +144,16 @@ public class Recorder
         {
             Debug.Log("Save recording info");
             binaryWriter.Dispose();
+            
+            OnRecordingStopped.Invoke(this, EventArgs.Empty);
+
 
             Debug.Log("FrameNr, pckgsize, idxFrameStart" + frameNr + " " + pckgSizePerFrame.Count + " " + idxFrameStart.Count);
-           
-            File.WriteAllText(recordFileIDs, JsonUtility.ToJson(new RecordingInfo(frameNr-1, recordedObjectIds.Count,
+            var peerUuidsToShort = recRep.audioRecRep.GetPeerUuidToShort();
+
+            File.WriteAllText(recordFileIDs, JsonUtility.ToJson(new RecordingInfo(frameNr-1, new List<string>(peerUuidsToShort.Keys), new List<short>(peerUuidsToShort.Values), recordedObjectIds.Count,
                 new List<NetworkId>(recordedObjectIds.Keys), new List<string>(textures.Values), new List<string>(recordedObjectIds.Values),
-                frameTimes, pckgSizePerFrame, idxFrameStart)));
+                frameTimes, pckgSizePerFrame, idxFrameStart), true));
 
             textures.Clear();
             recordedObjectIds.Clear();
@@ -496,10 +507,11 @@ public class Replayer
             streamFromFile.Close();
     }
 }
-
+[RequireComponent(typeof(AudioRecorderReplayer))]
 public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkComponent
 {
     public NetworkScene scene;
+    public AudioRecorderReplayer audioRecRep;
     [HideInInspector] public AvatarManager aManager;
     [HideInInspector] public NetworkSpawner spawner;
     private bool Recording = false; // this variable indicates if a recording is taking place, this doesn't need to be the local recording!
@@ -507,6 +519,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
 
     public string replayFile;
     [HideInInspector] public string recordFile = null;
+    [HideInInspector] public string audioRecordFile = null;
     [HideInInspector] public string path;
     [HideInInspector] public bool recording, replaying;
     [HideInInspector] public bool play = true;
@@ -520,7 +533,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
 
     [HideInInspector] public bool leftRoom = false;
     private RoomClient roomClient;
-    private Recorder recorder;
+    [HideInInspector] public Recorder recorder;
     [HideInInspector] public Replayer replayer;
     [HideInInspector] public bool recordingAvailable = false;
     [HideInInspector] public bool cleanedUp = true;
