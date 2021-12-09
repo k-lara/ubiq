@@ -34,7 +34,7 @@ namespace Ubiq.Spawning
         public PrefabCatalogue catalogue;
 
         private NetworkContext context;
-        private Dictionary<NetworkId, GameObject> spawned;
+        public Dictionary<NetworkId, GameObject> spawned { get; private set; }
         private EventLogger events;
 
         [Serializable]
