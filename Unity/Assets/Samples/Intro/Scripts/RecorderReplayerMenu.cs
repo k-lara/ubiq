@@ -240,6 +240,7 @@ public class RecorderReplayerMenu : MonoBehaviour
             recordImage.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
             recordText.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
             recRep.recording = true;
+            recRep.SetRecordingStartTime(System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
         }
         
     }

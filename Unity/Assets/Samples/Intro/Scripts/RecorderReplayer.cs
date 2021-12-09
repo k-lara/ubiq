@@ -68,9 +68,9 @@ public class Recorder
     {
         if (!initFile)
         {
-            var dateTime = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-            recRep.recordFile = recRep.path + "/rec" + dateTime + ".dat";
-            recordFileIDs = recRep.path + "/IDsrec" + dateTime + ".txt";
+            //var dateTime = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+            recRep.recordFile = recRep.path + "/rec" + recRep.recordingStartTimeString + ".dat";
+            recordFileIDs = recRep.path + "/IDsrec" + recRep.recordingStartTimeString + ".txt";
             recordedObjectIds = new Dictionary<NetworkId, string>();
 
             idxFrameStart.Add(0); // first frame in byte data has idx 0
@@ -144,17 +144,18 @@ public class Recorder
         {
             Debug.Log("Save recording info");
             binaryWriter.Dispose();
-            
-            OnRecordingStopped.Invoke(this, EventArgs.Empty);
-
 
             Debug.Log("FrameNr, pckgsize, idxFrameStart" + frameNr + " " + pckgSizePerFrame.Count + " " + idxFrameStart.Count);
-            var peerUuidsToShort = recRep.audioRecRep.GetPeerUuidToShort();
+            var audioInfoData = recRep.audioRecRep.GetAudioRecInfoData(); // order of objectids could be different than order in recordedObjectIds (only has avatar ids)
 
-            File.WriteAllText(recordFileIDs, JsonUtility.ToJson(new RecordingInfo(frameNr-1, new List<string>(peerUuidsToShort.Keys), new List<short>(peerUuidsToShort.Values), recordedObjectIds.Count,
+            File.WriteAllText(recordFileIDs, JsonUtility.ToJson(new RecordingInfo(frameNr-1, 
+                new List<NetworkId>(audioInfoData.Item1.Keys), new List<short>(audioInfoData.Item1.Values), new List<int>(audioInfoData.Item2),
+                recordedObjectIds.Count,
                 new List<NetworkId>(recordedObjectIds.Keys), new List<string>(textures.Values), new List<string>(recordedObjectIds.Values),
                 frameTimes, pckgSizePerFrame, idxFrameStart), true));
 
+            // Clear variables
+            OnRecordingStopped.Invoke(this, EventArgs.Empty);
             textures.Clear();
             recordedObjectIds.Clear();
             recordFileIDs = null;
@@ -178,6 +179,9 @@ public class Replayer
     // Replaying
     RecorderReplayer recRep;
 
+    public event EventHandler<RecordingInfo> OnLoadingReplay;
+    public event EventHandler OnReplayStopped;
+
     private NetworkSpawner spawner;
 
     private ReferenceCountedSceneGraphMessage[][] replayedMessages;
@@ -189,7 +193,7 @@ public class Replayer
     // maybe save info in Dictionary list and save objectid (key) and values (list: class, (if avatar what avatar type + texture info)
     private Dictionary<NetworkId, string> replayedObjectids; // avatar IDs and texture
     public Dictionary<NetworkId, ReplayedObjectProperties> replayedObjects; // new objectids for all other objects! 
-    private Dictionary<NetworkId, NetworkId> oldNewIds;
+    public Dictionary<NetworkId, NetworkId> oldNewIds;
     private bool loadingStarted = false; // set to true once loading recorded data starts
     private bool loaded = false;
     private FileStream streamFromFile;
@@ -317,7 +321,7 @@ public class Replayer
                 continue;
             }
             GameObject go = spawner.SpawnPersistentReplay(prefab, false, uid, true, new TransformMessage(recRep.thisTransform));
-
+            
             ReplayedObjectProperties props = new ReplayedObjectProperties();
             props.hider = go.GetComponent<ObjectHider>();
             Debug.Log("CreateRecordedObjects():  " + go.name);
@@ -346,8 +350,11 @@ public class Replayer
         {
             Debug.Log("Load info...");
             recInfo = await LoadRecInfo(filepath);
+            //OnLoadingReplay.Invoke(this, recInfo);
+
             Debug.Log(recInfo.frames + " " + recInfo.frameTimes.Count + " " + recInfo.pckgSizePerFrame.Count);
             objectsCreated = CreateRecordedObjects();
+            recRep.audioRecRep.OnLoadingReplay(recInfo);
             Debug.Log("Info loaded!");
         }
         else
@@ -468,7 +475,7 @@ public class Replayer
 
     public void Cleanup(bool unspawn)
     {
-        
+        OnReplayStopped.Invoke(this, EventArgs.Empty);
         Debug.Log("Cleanup " + Time.unscaledTime);
         foreach (var i in oldNewIds)
         {
@@ -537,6 +544,13 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     [HideInInspector] public Replayer replayer;
     [HideInInspector] public bool recordingAvailable = false;
     [HideInInspector] public bool cleanedUp = true;
+
+    [HideInInspector] public string recordingStartTimeString;
+
+    public void SetRecordingStartTime(string recordingStartTimeString)
+    {
+        this.recordingStartTimeString = recordingStartTimeString;
+    }
 
     public struct Message
     {
@@ -703,7 +717,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
                         stopTime = 0.0f;
                     }
 
-                    SetReplayFile();
+                    //SetReplayFile();
                     recordingAvailable = false; // avoid unnecessary savings of same info (is checked in methods too)
                 }
             }
@@ -765,44 +779,44 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     }
 
 }
-# if UNITY_EDITOR
-[CustomEditor(typeof(RecorderReplayer))]
-public class RecorderReplayerEditor : Editor
-{
+//# if UNITY_EDITOR
+//[CustomEditor(typeof(RecorderReplayer))]
+//public class RecorderReplayerEditor : Editor
+//{
 
-    public override void OnInspectorGUI()
-    {
-        var t = (RecorderReplayer)target;
-        DrawDefaultInspector();
+//    public override void OnInspectorGUI()
+//    {
+//        var t = (RecorderReplayer)target;
+//        DrawDefaultInspector();
 
-        if (Application.isPlaying)
-        {
-            EditorGUI.BeginDisabledGroup(!t.IsOwner());
-            if (GUILayout.Button(t.recording == true ? "Stop Recording" : "Record"))
-            {
-                t.recording = !t.recording;
-            }
-            t.replaying = EditorGUILayout.Toggle("Replaying", t.replaying);
-            if (t.replaying)
-            {
-                //t.cleanedUp = false;
-                if (GUILayout.Button(t.play == true ? "Stop" : "Play"))
-                {
-                    if (!t.play)
-                    {
-                        //t.replayingStartTime = Time.unscaledTime;
-                        t.replayingStartTime = t.replayer.recInfo.frameTimes[t.currentReplayFrame];
-                    }
-                    t.play = !t.play;
-                }
-                if (!t.play)
-                {
-                    t.sliderFrame = EditorGUILayout.IntSlider(t.sliderFrame, 0, t.replayer.recInfo.frames);
-                }
-            }
-            EditorGUI.EndDisabledGroup();
-        }
-    }
-}
-# endif
+//        if (Application.isPlaying)
+//        {
+//            EditorGUI.BeginDisabledGroup(!t.IsOwner());
+//            if (GUILayout.Button(t.recording == true ? "Stop Recording" : "Record"))
+//            {
+//                t.recording = !t.recording;
+//            }
+//            t.replaying = EditorGUILayout.Toggle("Replaying", t.replaying);
+//            if (t.replaying)
+//            {
+//                //t.cleanedUp = false;
+//                if (GUILayout.Button(t.play == true ? "Stop" : "Play"))
+//                {
+//                    if (!t.play)
+//                    {
+//                        //t.replayingStartTime = Time.unscaledTime;
+//                        t.replayingStartTime = t.replayer.recInfo.frameTimes[t.currentReplayFrame];
+//                    }
+//                    t.play = !t.play;
+//                }
+//                if (!t.play)
+//                {
+//                    t.sliderFrame = EditorGUILayout.IntSlider(t.sliderFrame, 0, t.replayer.recInfo.frames);
+//                }
+//            }
+//            EditorGUI.EndDisabledGroup();
+//        }
+//    }
+//}
+//# endif
 
