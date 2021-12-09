@@ -12,14 +12,23 @@ namespace RecorderReplayerTypes {
     {
         public byte[] uuid;
         public List<byte[]> samples = new List<byte[]>();
+        
+        // for debugging
+        public string sUuid;
+        public string sSamples = "";
+        public int length = 0;
 
         public AudioMessagePack(short uuid) 
-        { 
+        {
+            sUuid = uuid.ToString();
             this.uuid = BitConverter.GetBytes(uuid); 
         }
 
         public void Add(short[] samples) 
         {
+            sSamples += string.Join(", ", samples) + ", "; // for debugging
+            length += samples.Length;
+
             byte[] bSamples = new byte[samples.Length * 2];
             for (var i = 0; i < samples.Length; i++)
             {
@@ -28,7 +37,7 @@ namespace RecorderReplayerTypes {
             this.samples.Add(bSamples); 
         }
 
-        public void Clear() { samples.Clear();  }
+        public void Clear() { samples.Clear(); sSamples = ""; length = 0;  }
 
         // convert gathered samples into package [length [4 byte], uuid [2 byte], samples [2 * samples.length bytes]]
         public byte[] GetBytes()
@@ -39,6 +48,13 @@ namespace RecorderReplayerTypes {
             Buffer.BlockCopy(uuid, 0, byteMsg, 4, 2); // uuid (short)
             Buffer.BlockCopy(samplesArr, 0, byteMsg, 6, samplesArr.Length); // samples
             return byteMsg;
+        }
+
+        // for debugging purposes to check if recorded data makes sense
+        public override string ToString()
+        {           
+            // length without byte length for uuid
+            return length + ", " + sUuid + ", " + sSamples;
         }
 
     }
@@ -124,8 +140,9 @@ namespace RecorderReplayerTypes {
     {
         public int[] listLengths; // frameTimes.Count, pckSizePerFrame.Count, idxFrameStart.Count
         public int frames;
-        public List<string> peerUuids;
-        public List<short> uuidToShort;
+        public List<NetworkId> objectidsToShort;
+        public List<short> toShort;
+        public List<int> audioClipLengths;
         public int numberOfObjects;
         public List<NetworkId> objectids; // objectids from prefabs (unnecessary?)
         public List<string> textures; // textures
@@ -134,14 +151,15 @@ namespace RecorderReplayerTypes {
         public List<int> pckgSizePerFrame;
         public List<long> idxFrameStart; // long! index could get extremely high
 
-        public RecordingInfo(int frames, List<string> peerUuids, List<short> uuidToShort, int numberOfObjects, 
+        public RecordingInfo(int frames, List<NetworkId> objectidsToShort, List<short> toShort, List<int> audioClipLengths, int numberOfObjects, 
             List<NetworkId> objectids, List<string> textures, List<string> prefabs, 
             List<float> frameTimes, List<int> pckgSizePerFrame, List<long> idxFrameStart)
         {
             listLengths = new int[3] { frameTimes.Count, pckgSizePerFrame.Count, idxFrameStart.Count };
             this.frames = frames;
-            this.peerUuids = peerUuids;
-            this.uuidToShort = uuidToShort;
+            this.objectidsToShort = objectidsToShort;
+            this.toShort = toShort;
+            this.audioClipLengths = audioClipLengths;
             this.numberOfObjects = numberOfObjects;
             this.objectids = objectids;
             this.textures = textures;
