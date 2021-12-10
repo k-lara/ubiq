@@ -552,8 +552,9 @@ MonoBehaviour:
     recInfo:
       listLengths: 
       frames: 0
-      peerUuids: []
-      uuidToShort: 
+      objectidsToShort: []
+      toShort: 
+      audioClipLengths: 
       numberOfObjects: 0
       objectids: []
       textures: []
@@ -563,6 +564,7 @@ MonoBehaviour:
       idxFrameStart: 
   recordingAvailable: 0
   cleanedUp: 1
+  recordingStartTimeString: 
 --- !u!1 &1433732560
 GameObject:
   m_ObjectHideFlags: 0

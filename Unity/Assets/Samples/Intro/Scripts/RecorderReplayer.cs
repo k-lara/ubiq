@@ -180,6 +180,8 @@ public class Replayer
     RecorderReplayer recRep;
 
     public event EventHandler<RecordingInfo> OnLoadingReplay;
+    public event EventHandler OnReplayRepeat;
+    public event EventHandler<bool> OnReplayPaused;
     public event EventHandler OnReplayStopped;
 
     private NetworkSpawner spawner;
@@ -297,6 +299,7 @@ public class Replayer
         // no clue why that happens actually... I do reset all the variables after each recording. (update... I did not reset the previousFrame variable)
         if (recRep.currentReplayFrame == recInfo.frames) // no -1 for now
         {
+            OnReplayRepeat.Invoke(this, EventArgs.Empty);
             recRep.currentReplayFrame = 0;
             HideAll();
             streamFromFile.Position = 0;

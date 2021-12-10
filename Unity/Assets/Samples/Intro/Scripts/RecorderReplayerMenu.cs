@@ -360,8 +360,10 @@ public class RecorderReplayerMenu : MonoBehaviour
             }
             else
             {
+                //Debug.Log(recRep.currentReplayFrame);
                 sliderText.text = ""; 
                 slider.value = recRep.currentReplayFrame;
+                //Debug.Log(slider.value);
             }
         }
         else
