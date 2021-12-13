@@ -146,6 +146,8 @@ public class Recorder
             binaryWriter.Dispose();
 
             Debug.Log("FrameNr, pckgsize, idxFrameStart" + frameNr + " " + pckgSizePerFrame.Count + " " + idxFrameStart.Count);
+
+            recRep.audioRecRep.WriteLastSamplesOnRecordingStopped();
             var audioInfoData = recRep.audioRecRep.GetAudioRecInfoData(); // order of objectids could be different than order in recordedObjectIds (only has avatar ids)
 
             File.WriteAllText(recordFileIDs, JsonUtility.ToJson(new RecordingInfo(frameNr-1, 

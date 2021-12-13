@@ -140,8 +140,8 @@ namespace RecorderReplayerTypes {
     {
         public int[] listLengths; // frameTimes.Count, pckSizePerFrame.Count, idxFrameStart.Count
         public int frames;
-        public List<NetworkId> objectidsToShort;
-        public List<short> toShort;
+        public List<NetworkId> objectidsToClipNumber;
+        public List<short> clipNumber;
         public List<int> audioClipLengths;
         public int numberOfObjects;
         public List<NetworkId> objectids; // objectids from prefabs (unnecessary?)
@@ -151,14 +151,14 @@ namespace RecorderReplayerTypes {
         public List<int> pckgSizePerFrame;
         public List<long> idxFrameStart; // long! index could get extremely high
 
-        public RecordingInfo(int frames, List<NetworkId> objectidsToShort, List<short> toShort, List<int> audioClipLengths, int numberOfObjects, 
+        public RecordingInfo(int frames, List<NetworkId> objectidsToClipNumber, List<short> clipNumber, List<int> audioClipLengths, int numberOfObjects, 
             List<NetworkId> objectids, List<string> textures, List<string> prefabs, 
             List<float> frameTimes, List<int> pckgSizePerFrame, List<long> idxFrameStart)
         {
             listLengths = new int[3] { frameTimes.Count, pckgSizePerFrame.Count, idxFrameStart.Count };
             this.frames = frames;
-            this.objectidsToShort = objectidsToShort;
-            this.toShort = toShort;
+            this.objectidsToClipNumber = objectidsToClipNumber;
+            this.clipNumber = clipNumber;
             this.audioClipLengths = audioClipLengths;
             this.numberOfObjects = numberOfObjects;
             this.objectids = objectids;
