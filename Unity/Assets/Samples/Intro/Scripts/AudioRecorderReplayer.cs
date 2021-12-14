@@ -10,6 +10,7 @@ using System;
 using System.Linq;
 using Ubiq.Avatars;
 using Ubiq.Spawning;
+using Ubiq.Samples;
 
 
 [RequireComponent(typeof(RecorderReplayer))]
@@ -359,6 +360,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             foreach (var item in replayedAudioSources)
             {
                 var avatar = item.Value.gameObject.GetComponent<Ubiq.Avatars.Avatar>();
+                Debug.Log("old replay: " + avatar.Id.ToString() + " " + item.Key + " " + replayedAudioClipsRecordedLength[item.Key]);
                 objectidToClipNumber.Add(avatar.Id, item.Key);
                 audioClipLengths.Add(replayedAudioClipsRecordedLength[item.Key]);
             }
@@ -433,7 +435,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
                 Debug.Log("short value: " + item.Value + "object id" + item.Key);
                 // get new object id and add audio source to respective game object
                 var id = recRep.replayer.oldNewIds[item.Key];
-                var audioSource = spawner.spawned[id].AddComponent<AudioSource>();
+                var gameObject = spawner.spawned[id];
+                var audioSource = gameObject.AddComponent<AudioSource>();
+                gameObject.GetComponentInChildren<SpeechIndicator>().SetReplayAudioSource(audioSource);
                 audioSource.clip = AudioClip.Create(
                 name: "AudioClip " + item.Value + " id: " + id.ToString(),
                 lengthSamples: audioClipLengthsReplay[item.Value], // length is correct

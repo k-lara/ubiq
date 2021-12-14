@@ -29,11 +29,70 @@ namespace Ubiq.Samples
 
         private Avatars.Avatar avatar;
         private VoipAvatar voipAvatar;
+        private AudioSource replayAudioSource;
         private int lastSampleTimeMilliseconds;
 
         private float currentFrameVolumeSum = 0;
         private int currentFrameSampleCount = 0;
         private float[] volumeFrames;
+
+        // for replay
+        private int deltaTimeSamples = 0;
+        private int absTimeSamples = 0;
+        private int lastTimeSamples = 0;
+        private float volume = 0.0f;
+        private int samples = 0;
+
+        private void Update()
+        {
+            if(replayAudioSource)
+            {
+                (volume, samples) = GetStatsForReplay();
+            }
+        }
+        private (float, int) GetStatsForReplay()
+        {
+            if (absTimeSamples < 0)
+            {
+                absTimeSamples = replayAudioSource.timeSamples;
+                lastTimeSamples = replayAudioSource.timeSamples;
+            }
+            else
+            {
+                var deltaTimeSamples = replayAudioSource.timeSamples - lastTimeSamples;
+                if (deltaTimeSamples < 0)
+                {
+                    deltaTimeSamples += replayAudioSource.clip.samples;
+                }
+                var volume = 0.0f;
+                if (deltaTimeSamples > 0)
+                {
+                    var floatPcms = new float[deltaTimeSamples];
+
+                    // Gather volume for this set of stats
+                    replayAudioSource.clip.GetData(floatPcms, lastTimeSamples);
+                    for (int i = 0; i < floatPcms.Length; i++)
+                    {
+                        volume += Mathf.Abs(floatPcms[i]);
+                        floatPcms[i] = 0;
+                    }
+                }
+
+                // Update time trackers
+                absTimeSamples += deltaTimeSamples;
+                lastTimeSamples = replayAudioSource.timeSamples;
+
+                // Calculate stats for the advance
+                return (volume, deltaTimeSamples);
+            }
+
+            return (0, 0);
+        }
+
+        public void SetReplayAudioSource(AudioSource audioSource)
+        {
+            replayAudioSource = audioSource;
+        }
 
         private void Start()
         {
@@ -43,6 +102,16 @@ namespace Ubiq.Samples
 
         private void LateUpdate()
         {
+            if (replayAudioSource) // gives replayed avatars a speech indicator too
+            {
+                //Debug.Log("replayAudioSource");    
+                UpdateSamples();
+                UpdateIndicators();
+                UpdatePosition();
+                //Debug.Log(string.Join(", ", volumeFrames));
+                return;
+            }
+
             if (!avatar || avatar.IsLocal || !voipAvatar)
             {
                 Hide();
@@ -70,9 +139,19 @@ namespace Ubiq.Samples
 
             var volumeWindowSampleCount = GetVolumeWindowSampleCount();
 
-            var stats = voipAvatar.peerConnection.audioSink.lastFrameStats;
-            currentFrameVolumeSum += stats.volume;
-            currentFrameSampleCount += stats.samples;
+            if (replayAudioSource)
+            {
+                currentFrameVolumeSum += volume;
+                currentFrameSampleCount += samples;
+                //Debug.Log("replay " + currentFrameSampleCount + " " + currentFrameVolumeSum);
+            }
+            else
+            {
+                var stats = voipAvatar.peerConnection.audioSink.lastFrameStats;
+                currentFrameVolumeSum += stats.volume;
+                currentFrameSampleCount += stats.samples;
+                //Debug.Log(currentFrameSampleCount + " " + currentFrameVolumeSum);
+            }
 
             if (currentFrameSampleCount > volumeWindowSampleCount)
             {
@@ -84,7 +163,16 @@ namespace Ubiq.Samples
 
         private int GetVolumeWindowSampleCount()
         {
-            var sampleRate = voipAvatar.peerConnection.audioSink.sampleRate;
+            int sampleRate;
+            if (replayAudioSource)
+            {
+                sampleRate = replayAudioSource.clip.frequency;
+            }
+            else
+            {
+               sampleRate = voipAvatar.peerConnection.audioSink.sampleRate;
+            }
+
             return (int)(sampleSecondsPerIndicator * sampleRate);
         }
 
