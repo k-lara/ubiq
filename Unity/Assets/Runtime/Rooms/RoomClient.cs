@@ -375,14 +375,14 @@ namespace Ubiq.Rooms
                             // stop it before authority gets reassigned (expecially if previous authority disconnected)
                             // otherwise new recordings are created but never ended correctly
                             context.scene.recorder.StopRecording(); 
-                            Debug.Log("Assign new recorder authority to: " + peers[peers.Keys.First()].UUID);
-                            var creator = peers[peers.Keys.First()];
-                            creator["creator"] = "1";
-                            if (creator.UUID == me.UUID)
-                            {
+                            //Debug.Log("Assign new recorder authority to: " + peers[peers.Keys.First()].UUID);
+                            //var creator = peers[peers.Keys.First()];
+                            //creator["creator"] = "1";
+                            //if (creator.UUID == me.UUID)
+                            //{
                                 me["creator"] = "1";
-                            }
-                            OnPeerUpdated.Invoke(creator);
+                            //}
+                            //OnPeerUpdated.Invoke(creator);
                         }
                         OnPeerRemoved.Invoke(peerInterface);
                     }
