@@ -65,9 +65,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
 
         public void WriteRemainingAudioData()
         {
-            Debug.Log("Write audio data at frame: " + recRepA.frameNr);
+            //Debug.Log("Write audio data at frame: " + recRepA.frameNr);
             var arr = audioMessages.SelectMany(a => a).ToArray();
-            Debug.Log("arr length: " + arr.Length + " samplesLength: " + samplesLength);
+            //Debug.Log("arr length: " + arr.Length + " samplesLength: " + samplesLength);
             var l = BitConverter.GetBytes(arr.Length - 4); // only need length of package not length of package + 4 byte of length
             arr[0] = l[0]; arr[1] = l[1]; arr[2] = l[2]; arr[3] = l[3];
             u = BitConverter.GetBytes(sinkCLIPNUMBER);
@@ -282,9 +282,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             if ((frameNr % frameX) == 0)
             //if (samplesLengthUntilNextWrite >= (16000 * 2) )
             {
-                Debug.Log("Write audio data at frame: " + frameNr);
+                //Debug.Log("Write audio data at frame: " + frameNr);
                 var arr = audioMessages.SelectMany(a => a).ToArray();
-                Debug.Log("arr length: " + arr.Length + " samplesLength: " + samplesLength);
+                //Debug.Log("arr length: " + arr.Length + " samplesLength: " + samplesLength);
                 byte[] l = BitConverter.GetBytes(arr.Length - 4); // only need length of package not length of package + 4 byte of length
                 arr[0] = l[0]; arr[1] = l[1]; arr[2] = l[2]; arr[3] = l[3];
                 arr[4] = u[0]; arr[5] = u[1];
@@ -307,7 +307,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         foreach (var item in replayedAudioSources)
         {
             var diff = item.Value.timeSamples - replayedAudioClipsStartIndices[item.Key]; // how many samples clip has advanced since start of recording
-            Debug.Log("Diff " + diff + "- start index: " +  replayedAudioClipsStartIndices[item.Key] + " u: " + item.Key);
+            //Debug.Log("Diff " + diff + "- start index: " +  replayedAudioClipsStartIndices[item.Key] + " u: " + item.Key);
             if (diff == 0)
             {
                 continue;
@@ -316,7 +316,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             var byteSamples = new byte[diff * 2 + 6]; // from short + length + clipNr
             var l = BitConverter.GetBytes(byteSamples.Length - 4); // pckg length without inlcluding 4 bytes for int pckg length
             var u = BitConverter.GetBytes(item.Key);
-            Debug.Log("replay u: " + u);
+            //Debug.Log("replay u: " + u);
             byteSamples[0] = l[0]; byteSamples[1] = l[1]; byteSamples[2] = l[2]; byteSamples[3] = l[3];
             byteSamples[4] = u[0]; byteSamples[5] = u[1];
             item.Value.clip.GetData(floatSamples, replayedAudioClipsStartIndices[item.Key]);
@@ -360,7 +360,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             foreach (var item in replayedAudioSources)
             {
                 var avatar = item.Value.gameObject.GetComponent<Ubiq.Avatars.Avatar>();
-                Debug.Log("old replay: " + avatar.Id.ToString() + " " + item.Key + " " + replayedAudioClipsRecordedLength[item.Key]);
+                //Debug.Log("old replay: " + avatar.Id.ToString() + " " + item.Key + " " + replayedAudioClipsRecordedLength[item.Key]);
                 objectidToClipNumber.Add(avatar.Id, item.Key);
                 audioClipLengths.Add(replayedAudioClipsRecordedLength[item.Key]);
             }
@@ -373,9 +373,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     public void WriteLastSamplesOnRecordingStopped()
     {
         Debug.Log("AudioRecorder OnRecordingStopped");
-        Debug.Log("Write audio data at frame: " + frameNr);
+        //Debug.Log("Write audio data at frame: " + frameNr);
         var arr = audioMessages.SelectMany(a => a).ToArray();
-        Debug.Log("arr length: " + arr.Length + " samplesLength: " + samplesLength);
+        //Debug.Log("arr length: " + arr.Length + " samplesLength: " + samplesLength);
         var l = BitConverter.GetBytes(arr.Length - 4); // only need length of package not length of package + 4 byte of length
         arr[0] = l[0]; arr[1] = l[1]; arr[2] = l[2]; arr[3] = l[3];
         arr[4] = u[0]; arr[5] = u[1];
@@ -425,14 +425,14 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             objectidToClipNumberReplay = recInfo.objectidsToClipNumber.Zip(recInfo.clipNumber, (k, v) => new { k, v }).ToDictionary(x => x.k, x => x.v);
             audioClipLengthsReplay = recInfo.clipNumber.Zip(recInfo.audioClipLengths, (k, v) => new { k, v }).ToDictionary(x => x.k, x => x.v);
             audioFileStream = File.Open(filepath, FileMode.Open); // open audio byte file for loading audio data into clips
-            foreach (var item in audioClipLengthsReplay)
-            {
-                Debug.Log("OnLoadingReplay" + item.Key + " " + item.Value);
-            }
+            //foreach (var item in audioClipLengthsReplay)
+            //{
+            //    Debug.Log("OnLoadingReplay" + item.Key + " " + item.Value);
+            //}
      
             foreach (var item in objectidToClipNumberReplay)
             {
-                Debug.Log("short value: " + item.Value + "object id" + item.Key);
+                //Debug.Log("short value: " + item.Value + "object id" + item.Key);
                 // get new object id and add audio source to respective game object
                 var id = recRep.replayer.oldNewIds[item.Key];
                 var gameObject = spawner.spawned[id];
@@ -447,7 +447,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
                 audioSource.ignoreListenerPause = true;
                 audioSource.spatialBlend = 1.0f;
                 //audioSource.Play();
-                Debug.Log(audioSource.clip.name + " length: " + audioClipLengthsReplay[item.Value]);
+                //Debug.Log(audioSource.clip.name + " length: " + audioClipLengthsReplay[item.Value]);
                 replayedAudioSources.Add(item.Value, audioSource);
                
                 audioClipPositions.Add(item.Value, 0);
@@ -495,7 +495,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             int l = BitConverter.ToInt32(pckgLength, 0) - 2; // pckgLength/2 = length samples
             short s = BitConverter.ToInt16(clipNumber, 0);
 
-            Debug.Log("sizes: " + l + " " + s);
+            //Debug.Log("sizes: " + l + " " + s);
             byte[] audioPckg = new byte[l]; // contains audio data without bytes for short "uuid"
             audioFileStream.Read(audioPckg, 0, audioPckg.Length);
             //Debug.Log("stream position " + audioFileStream.Position);
@@ -517,7 +517,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             //{
                 replayedAudioSources[s].clip.SetData(floatSamples, audioClipPositions[s]);
                 audioClipPositions[s] += floatSamples.Length; // advance position
-                Debug.Log(s + " " + audioClipPositions[s] + " " + replayedAudioSources[s].clip.samples);
+                //Debug.Log(s + " " + audioClipPositions[s] + " " + replayedAudioSources[s].clip.samples);
             //}
 
         }
