@@ -134,11 +134,19 @@ namespace Ubiq.Spawning
             Debug.Log("visible is " + visible);
             if (visible)
             {
-                go.GetComponent<ObjectHider>().SetLayer(0); // show (default)
+                if (go.TryGetComponent(out ObjectHider objectHider))
+                {
+                    objectHider.SetLayer(0);
+                }
+                //go.GetComponent<ObjectHider>().SetLayer(0); // show (default)
             }
             else
             {
-                go.GetComponent<ObjectHider>().SetLayer(8); // hide
+                if (go.TryGetComponent(out ObjectHider objectHider))
+                {
+                    objectHider.SetLayer(8);
+                }
+                //go.GetComponent<ObjectHider>().SetLayer(8); // hide
             }
             
             

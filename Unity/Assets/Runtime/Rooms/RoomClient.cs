@@ -481,7 +481,7 @@ namespace Ubiq.Rooms
         /// </summary>
         public void Join(string joincode)
         {
-            me["creator"] = "0";
+            me["creator"] = "1";
             actions.Add(() =>
             {
                 SendToServer("Join", new JoinRequest()
@@ -498,7 +498,7 @@ namespace Ubiq.Rooms
         /// </summary>
         public void Join(Guid guid)
         {
-            me["creator"] = "0";
+            me["creator"] = "1";
             actions.Add(() =>
             {
                 SendToServer("Join", new JoinRequest()
