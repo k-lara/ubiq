@@ -218,12 +218,14 @@ public class Replayer
     {
         if (!loadingStarted)
         {
+            //Debug.Log("1 " + recRep.play);
             LoadRecording(replayFile);
+            //Debug.Log("2 " + recRep.play);
+
         }
 
         if (recRep.play)
         {
-
             if (loaded) // meaning recInfo
             {
                 recRep.replayingStartTime += Time.deltaTime;
@@ -263,7 +265,7 @@ public class Replayer
                 //Debug.Log("!play");
                 if(recRep.currentReplayFrame < recRep.sliderFrame)
                 {
-                    Debug.Log("after");
+                    //Debug.Log("after");
                     while (recRep.currentReplayFrame < recRep.sliderFrame)
                     {
                         ReplayFromFile();
@@ -328,14 +330,19 @@ public class Replayer
             GameObject go = spawner.SpawnPersistentReplay(prefab, false, uid, true, new TransformMessage(recRep.thisTransform));
             
             ReplayedObjectProperties props = new ReplayedObjectProperties();
-            props.hider = go.GetComponent<ObjectHider>();
+            if (go.TryGetComponent(out ObjectHider objectHider))
+            {
+                //props.hider = go.GetComponent<ObjectHider>();
+                props.hider = objectHider;
+            }
             Debug.Log("CreateRecordedObjects():  " + go.name);
             NetworkId newId = go.GetComponent<INetworkObject>().Id;
             oldNewIds.Add(objectid, newId);
             Debug.Log(objectid.ToString() + " new: " + newId.ToString());
             props.gameObject = go;
             props.id = newId;
-            INetworkComponent[] components = go.GetComponentsInChildren<INetworkComponent>();
+            // Nels' magic leap room threw an error because the posters he had in the room as child game objects cannot be added because the key already exists
+            INetworkComponent[] components = go.GetComponentsInChildren<INetworkComponent>(); 
             foreach (var comp in components)
             {
                 props.components.Add(NetworkScene.GetComponentId(comp), comp);
@@ -474,7 +481,10 @@ public class Replayer
     {
         foreach (ReplayedObjectProperties props in replayedObjects.Values)
         {
-            props.hider.NetworkedHide();
+           if (props.hider)
+            {
+                props.hider.NetworkedHide();
+            }
         }
     }
 
@@ -488,7 +498,7 @@ public class Replayer
         }
 
         loadingStarted = loaded = objectsCreated = false;
-        recRep.play = true;
+        recRep.play = false;
         recRep.currentReplayFrame = 0;
         recRep.sliderFrame = 0;
         // only unspawn while in room, NOT when leaving the room as it will be unspawned by the OnLeftRoom event anyways.
@@ -534,7 +544,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     [HideInInspector] public string audioRecordFile = null;
     [HideInInspector] public string path;
     [HideInInspector] public bool recording, replaying;
-    [HideInInspector] public bool play = true;
+    [HideInInspector] public bool play = false;
     [HideInInspector] public int sliderFrame = 0;
     [HideInInspector] public float stopTime = 0.0f;
     [HideInInspector] public float replayingStartTime = 0.0f;
@@ -593,6 +603,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
         Debug.Log("Assign RecorderReplayer to Recorder and Replayer");
         recorder = new Recorder(this);
         replayer = new Replayer(this);
+        play = false; // I am not entirely sure why it is true otherwise
     }
 
     public struct RoomMessage
@@ -699,6 +710,8 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     {
        if (roomClient.Me["creator"] == "1") // don't bother if we are not room creators
         {
+            //Debug.Log(play);
+
             if (!recording)
             {
                 if (Recording)

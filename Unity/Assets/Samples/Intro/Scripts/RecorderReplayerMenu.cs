@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System;
 using System.IO;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -39,6 +40,7 @@ public class RecorderReplayerMenu : MonoBehaviour
     private EventTrigger trigger; // for changing the slider value
 
     private RecorderReplayer recRep;
+    private AudioRecorderReplayer audioRecRep;
     private RoomClient roomClient;
     private DirectoryInfo dir;
 
@@ -50,6 +52,8 @@ public class RecorderReplayerMenu : MonoBehaviour
     private bool resetReplayImage = false; // in case we loaded an invalid file path
 
     private List<Button> replayFileButtons;
+
+    //private event EventHandler<bool> OnPlayPauseReplay;
 
     void Start()
     {
@@ -67,6 +71,7 @@ public class RecorderReplayerMenu : MonoBehaviour
 
         Debug.Log("Set RecorderReplayer in Menu");
         recRep = scene.GetComponent<RecorderReplayer>();
+        audioRecRep = recRep.audioRecRep;
 
         // Changing slider value (adds trigger behaviour)
         trigger = slider.gameObject.GetComponent<EventTrigger>();
@@ -298,19 +303,21 @@ public class RecorderReplayerMenu : MonoBehaviour
         recRep.replaying = false;
         resetReplayImage = false;
         playPauseButton.interactable = false;
-
-        if (!recRep.play)
-        {
-            // when replay is initialised again the correct sprite is visible in the slider panel
-            playPauseImage.sprite = pauseSprite;
-            playPauseText.text = "Pause";
-        }
+        
+        // when replay is initialised again the correct sprite is visible in the slider panel
+        playPauseImage.sprite = playSprite;
+        playPauseText.text = "Play";
+       
+        
     }
 
     public void PlayPauseReplay()
     {        
         if (recRep.play) // if playing pause it
         {
+            Debug.Log("Pause");
+            //OnPlayPauseReplay.Invoke(this, false);
+            audioRecRep.OnPlayPauseReplay(false);
             playPauseImage.sprite = playSprite;
             playPauseText.text = "Play";
             recRep.play = false;
@@ -318,6 +325,9 @@ public class RecorderReplayerMenu : MonoBehaviour
         }
         else // resume
         {
+            Debug.Log("Play");
+            //OnPlayPauseReplay.Invoke(this, true);
+            audioRecRep.OnPlayPauseReplay(true);
             playPauseImage.sprite = pauseSprite;
             playPauseText.text = "Pause";
             recRep.play = true;
