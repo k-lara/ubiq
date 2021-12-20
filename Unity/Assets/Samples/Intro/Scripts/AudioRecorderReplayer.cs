@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 using System.IO;
 using Ubiq.Messaging;
 using Ubiq.Rooms;
@@ -168,12 +169,14 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     // audio replay
     private NetworkSpawner spawner;
     private Dictionary<NetworkId, short> objectidToClipNumberReplay = null;
-    private Dictionary<short, AudioSource> replayedAudioSources = null;
+    public Dictionary<short, AudioSource> replayedAudioSources = null;
+    private Dictionary<short, int> clipNumberToLatency = null;
     private Dictionary<short, int> audioClipPositions = null;
     private Dictionary<short, int> audioClipLengthsReplay = null;
     private FileStream audioFileStream = null;
     private Dictionary<short, int> replayedAudioClipsStartIndices = null; // when recording a replay to know from where to record the replay
     private Dictionary<short, int> replayedAudioClipsRecordedLength = null; // when recording a replay to know until when to record a replay
+    private bool pressedPlayFirstTime = false;
 
     // audio clip creation
     private float gain = 1.0f;
@@ -205,6 +208,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         //peerUuidToShort = new Dictionary<string, short>(); // fill anew for every new recording
         objectidToClipNumber = new Dictionary<NetworkId, short>();
         replayedAudioSources = new Dictionary<short, AudioSource>();
+        clipNumberToLatency = new Dictionary<short, int>();
         audioClipPositions = new Dictionary<short, int>();
         replayedAudioClipsStartIndices = new Dictionary<short, int>();
         replayedAudioClipsRecordedLength = new Dictionary<short, int>();
@@ -226,6 +230,15 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         audioMessages.Add(new byte[2]); // clip number (short)
 
         SetClipNumber(CLIPNUMBER++);
+    }
+    public Dictionary<short, AudioSource> GetReplayAudioSources()
+    {
+        return replayedAudioSources;
+    }
+
+    public void SetLatency(short clipNr, int sample)
+    {
+        clipNumberToLatency[clipNr] = sample;
     }
 
     // recording
@@ -312,6 +325,10 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             {
                 continue;
             }
+            if (diff < 0)
+            {
+                diff = item.Value.clip.samples - replayedAudioClipsStartIndices[item.Key] + item.Value.timeSamples;
+            }
             var floatSamples = new float[diff];
             var byteSamples = new byte[diff * 2 + 6]; // from short + length + clipNr
             var l = BitConverter.GetBytes(byteSamples.Length - 4); // pckg length without inlcluding 4 bytes for int pckg length
@@ -359,6 +376,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         {
             foreach (var item in replayedAudioSources)
             {
+                Debug.Log("replayed audio sources (rec info data): " + item.Key);
                 var avatar = item.Value.gameObject.GetComponent<Ubiq.Avatars.Avatar>();
                 //Debug.Log("old replay: " + avatar.Id.ToString() + " " + item.Key + " " + replayedAudioClipsRecordedLength[item.Key]);
                 objectidToClipNumber.Add(avatar.Id, item.Key);
@@ -407,10 +425,46 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         initAudioFile = false;
         frameNr = 0;
         samplesLength = 0;
+        pressedPlayFirstTime = false;
 
         binaryWriterAudio.Dispose();
         replayedAudioClipsStartIndices.Clear(); // when recording a replay
         replayedAudioClipsRecordedLength.Clear();
+        clipNumberToLatency.Clear();
+    }
+
+    // 
+    private void PlayAndConsiderLatency(AudioSource audioSource, int samples)
+    {
+        audioSource.Play();
+        audioSource.timeSamples = samples;
+    }
+
+    // is called in RecorderReplayerMenu
+    public void OnPlayPauseReplay(bool play)
+    {
+        if (play)
+        {
+            foreach (var item in replayedAudioSources)
+            {
+                if (!pressedPlayFirstTime)
+                {
+                    PlayAndConsiderLatency(item.Value, clipNumberToLatency[item.Key]);
+                }
+                else
+                {
+                    item.Value.UnPause();
+                }    
+            }
+            pressedPlayFirstTime = true;
+        }
+        else
+        {
+            foreach (var item in replayedAudioSources)
+            {
+                item.Value.Pause();
+            }
+        }
     }
 
     // gets called once recording info is loaded in the Replayer and replayed objects are created!
@@ -424,6 +478,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
 
             objectidToClipNumberReplay = recInfo.objectidsToClipNumber.Zip(recInfo.clipNumber, (k, v) => new { k, v }).ToDictionary(x => x.k, x => x.v);
             audioClipLengthsReplay = recInfo.clipNumber.Zip(recInfo.audioClipLengths, (k, v) => new { k, v }).ToDictionary(x => x.k, x => x.v);
+            clipNumberToLatency.Clear();
             audioFileStream = File.Open(filepath, FileMode.Open); // open audio byte file for loading audio data into clips
             //foreach (var item in audioClipLengthsReplay)
             //{
@@ -444,13 +499,14 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
                 channels: 1,
                 frequency: 16000,
                 stream: false);
-                audioSource.ignoreListenerPause = true;
+                audioSource.ignoreListenerPause = false;
                 audioSource.spatialBlend = 1.0f;
                 //audioSource.Play();
                 //Debug.Log(audioSource.clip.name + " length: " + audioClipLengthsReplay[item.Value]);
                 replayedAudioSources.Add(item.Value, audioSource);
                
                 audioClipPositions.Add(item.Value, 0);
+                clipNumberToLatency.Add(item.Value, 0);
 
                 //audioSource.Play();
                 float[] testClipData = new float[audioClipLengthsReplay[0]];
@@ -460,10 +516,6 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
                 
             ReadAudioDataFromFile();
             
-            foreach( var item in replayedAudioSources)
-            {
-                item.Value.Play();
-            }
             Debug.Log("AudioClips created!");
             return true;
         }
@@ -535,9 +587,10 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
 
     private void Replayer_OnReplayRepeat(object sender, EventArgs e)
     {
-        foreach (var source in replayedAudioSources.Values)
+        foreach (var item in replayedAudioSources)
         {
-            source.timeSamples = 0;
+            PlayAndConsiderLatency(item.Value, clipNumberToLatency[item.Key]);
+            //item.Value.timeSamples = 0; // without considering latency
         }
     }
 
@@ -561,3 +614,41 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         throw new NotImplementedException();
     }
 }
+
+# if UNITY_EDITOR
+[CustomEditor(typeof(AudioRecorderReplayer))]
+public class RecorderReplayerEditor : Editor
+{
+
+    public override void OnInspectorGUI()
+    {
+        var t = (AudioRecorderReplayer)target;
+        int latency; // in samples
+        DrawDefaultInspector();
+
+        if (Application.isPlaying)
+        {
+            //EditorGUI.BeginDisabledGroup(!t.IsOwner());
+            if (t.recRep.replaying)
+            {
+                if (GUILayout.Button("Manage latency (ms)"))
+                {
+                   foreach(var item in t.GetReplayAudioSources())
+                    {
+                        EditorGUILayout.IntField(String.Format("Clip {0}", item.Key), 0);
+                    }
+                }
+                //Debug.Log("AudioRecorderReplayer EditorGUI: Loading replay");
+                if(!t.recRep.play)
+                {
+
+                }
+
+            }
+       
+            //EditorGUI.EndDisabledGroup();
+        }
+    }
+}
+# endif
+
