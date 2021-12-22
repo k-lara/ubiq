@@ -42,51 +42,78 @@ namespace Ubiq.Samples
         private int lastTimeSamples = 0;
         private float volume = 0.0f;
         private int samples = 0;
+        private int latencySamples = 0;
 
         private void Update()
         {
-            if(replayAudioSource)
+            if (replayAudioSource && replayAudioSource.isPlaying) // if not playing don't bother
             {
                 (volume, samples) = GetStatsForReplay();
             }
         }
         private (float, int) GetStatsForReplay()
         {
-            if (absTimeSamples < 0)
+            //if (absTimeSamples < 0) // this never happens does it...
+            //{
+            //    absTimeSamples = replayAudioSource.timeSamples; // current position in clip
+            //    lastTimeSamples = replayAudioSource.timeSamples;
+            //}
+            //else
+            //{
+            var deltaTimeSamples = replayAudioSource.timeSamples - lastTimeSamples;
+            int deltaTimeSamplesLatency = 0;
+            if (deltaTimeSamples < 0) // end of clip was reached and we start from the beginning
             {
-                absTimeSamples = replayAudioSource.timeSamples;
-                lastTimeSamples = replayAudioSource.timeSamples;
+                if (latencySamples > 0)
+                {
+                    deltaTimeSamples = replayAudioSource.clip.samples - lastTimeSamples; // samples until end of clip
+                    deltaTimeSamplesLatency = replayAudioSource.timeSamples - latencySamples; // samples from clip start with latency accounted for to current position
+                }
+                else
+                {
+                    deltaTimeSamples += replayAudioSource.clip.samples; 
+                }
             }
-            else
+            var volume = 0.0f;
+            if (deltaTimeSamples > 0)
             {
-                var deltaTimeSamples = replayAudioSource.timeSamples - lastTimeSamples;
-                if (deltaTimeSamples < 0)
+                var floatPcms = new float[deltaTimeSamples];
+
+                // Gather volume for this set of stats
+                //Debug.Log("deltaTimeSamples " + deltaTimeSamples + " " + lastTimeSamples);
+                replayAudioSource.clip.GetData(floatPcms, lastTimeSamples);
+                for (int i = 0; i < floatPcms.Length; i++)
                 {
-                    deltaTimeSamples += replayAudioSource.clip.samples;
+                    volume += Mathf.Abs(floatPcms[i]);
+                    floatPcms[i] = 0;
                 }
-                var volume = 0.0f;
-                if (deltaTimeSamples > 0)
+            }
+            if (deltaTimeSamplesLatency > 0)
+            {
+                var floatPcmsLatency = new float[deltaTimeSamplesLatency];
+                //Debug.Log("deltaTimeSamplesLatency " + deltaTimeSamplesLatency + " " + latencySamples);
+                replayAudioSource.clip.GetData(floatPcmsLatency, latencySamples);
+                for (int i = 0; i < floatPcmsLatency.Length; i++)
                 {
-                    var floatPcms = new float[deltaTimeSamples];
-
-                    // Gather volume for this set of stats
-                    replayAudioSource.clip.GetData(floatPcms, lastTimeSamples);
-                    for (int i = 0; i < floatPcms.Length; i++)
-                    {
-                        volume += Mathf.Abs(floatPcms[i]);
-                        floatPcms[i] = 0;
-                    }
+                    volume += Mathf.Abs(floatPcmsLatency[i]);
+                    floatPcmsLatency[i] = 0;
                 }
-
-                // Update time trackers
-                absTimeSamples += deltaTimeSamples;
-                lastTimeSamples = replayAudioSource.timeSamples;
-
-                // Calculate stats for the advance
-                return (volume, deltaTimeSamples);
             }
 
-            return (0, 0);
+            // Update time trackers
+            //absTimeSamples += deltaTimeSamples;
+            lastTimeSamples = replayAudioSource.timeSamples;
+
+            // Calculate stats for the advance
+            return (volume, deltaTimeSamples + deltaTimeSamplesLatency);
+            //}
+
+            //return (0, 0);
+        }
+
+        public void SetLatencySamples(int samples)
+        {
+            latencySamples = samples;
         }
 
         public void SetReplayAudioSource(AudioSource audioSource)
