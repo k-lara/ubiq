@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using System.Threading.Tasks;
 using Ubiq.Messaging;
 using Ubiq.Rooms;
 using Ubiq.Voip;
@@ -176,7 +177,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     public Dictionary<short, SpeechIndicator> speechIndicators = null;
     private Dictionary<short, int> clipNumberToLatency = null;
     [SerializeField]
-    public int[] latencies;
+    public int[] latenciesMs;
+    [SerializeField]
+    public int[] latenciesSamples;
     [SerializeField]
     public bool[] mute;    
     //public int LatencyClip1, LatencyClip2, LatencyClip3, LatencyClip4, LatencyClip5, LatencyClip6, LatencyClip7;
@@ -220,7 +223,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         objectidToClipNumber = new Dictionary<NetworkId, short>();
         replayedAudioSources = new Dictionary<short, AudioSource>();
         speechIndicators = new Dictionary<short, SpeechIndicator>();
-        clipNumberToLatency = new Dictionary<short, int>();
+        clipNumberToLatency = new Dictionary<short, int>(); 
         audioClipPositions = new Dictionary<short, int>();
         replayedAudioClipsStartIndices = new Dictionary<short, int>();
         replayedAudioClipsRecordedLength = new Dictionary<short, int>();
@@ -269,13 +272,15 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         var i = 0;
         foreach (var item in replayedAudioSources)
         {
-            var latency = SetLatency(item.Key, latencies[i]);
+            var latency = SetLatency(item.Key, latenciesMs[i]); // latencies are in ms
 
             // speech indicators need to know about latency too otherwise there is an error
             speechIndicators[item.Key].SetLatencySamples(latency);
             i++;
         }
-        Debug.Log("Latencies: " + string.Join(", ", latencies));
+        var lm = JsonUtility.ToJson(new LatencyMessage() { latencySamples = clipNumberToLatency.Values.ToArray(), mute = mute });
+        context.SendJson(new Message() { id = 2, messageType = lm });
+        Debug.Log("Latencies: " + string.Join(", ", latenciesMs));
         Debug.Log("Muted: " + string.Join(", ", mute));
     }
 
@@ -479,7 +484,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         samplesLength = 0;
         pressedPlayFirstTime = false;
 
-        binaryWriterAudio.Dispose();
+        if (binaryWriterAudio != null)
+            binaryWriterAudio.Dispose();
         replayedAudioClipsStartIndices.Clear(); // when recording a replay
         replayedAudioClipsRecordedLength.Clear();
         clipNumberToLatency.Clear();
@@ -493,15 +499,12 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         Debug.Log("Play and consider latency" + samples);
     }
 
-    // is called in RecorderReplayerMenu
-    public void OnPlayPauseReplay(bool play)
+    private void PlayPause(bool play)
     {
-        //Debug.Log("OnPlayPauseReplay");
         int i = 0;
         if (play)
         {
             //Debug.Log("OnPlay: " + replayedAudioSources.Count);
-
             foreach (var item in replayedAudioSources)
             {
                 item.Value.mute = mute[i];
@@ -530,8 +533,18 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         }
     }
 
+    // is called in RecorderReplayerMenu
+    public void OnPlayPauseReplay(bool play)
+    {
+        //Debug.Log("OnPlayPauseReplay");
+        var ppm = JsonUtility.ToJson(new PlayPauseMessage() { play = play });
+        context.SendJson(new Message() { id = 3, messageType = ppm });
+
+        PlayPause(play);
+    }
+
     // gets called once recording info is loaded in the Replayer and replayed objects are created!
-    public bool OnLoadingReplay(RecordingInfo recInfo)
+    public async void OnLoadingReplay(RecordingInfo recInfo)
     {
         string filepath = recRep.path + "/audio" + recRep.replayFile + ".dat";
         Debug.Log("Audiorec filepath: " + filepath);
@@ -541,7 +554,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
 
             objectidToClipNumberReplay = recInfo.objectidsToClipNumber.Zip(recInfo.clipNumber, (k, v) => new { k, v }).ToDictionary(x => x.k, x => x.v);
             audioClipLengthsReplay = recInfo.clipNumber.Zip(recInfo.audioClipLengths, (k, v) => new { k, v }).ToDictionary(x => x.k, x => x.v);
-            latencies = new int[audioClipLengthsReplay.Count];
+            latenciesMs = new int[audioClipLengthsReplay.Count];
             mute = new bool[audioClipLengthsReplay.Count];
             clipNumberToLatency.Clear();
             MuteAllButMasterClip(MASTERONLY);
@@ -556,57 +569,66 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
      
             foreach (var item in objectidToClipNumberReplay)
             {
-                //Debug.Log("short value: " + item.Value + "object id" + item.Key);
                 // get new object id and add audio source to respective game object
-                var id = recRep.replayer.oldNewIds[item.Key];
-                var gameObject = spawner.spawned[id];
-                var audioSource = gameObject.AddComponent<AudioSource>();
-                var speechIndicator = gameObject.GetComponentInChildren<SpeechIndicator>();
-                speechIndicator.SetReplayAudioSource(audioSource);
-                speechIndicators.Add(item.Value, speechIndicator);
-                audioSource.clip = AudioClip.Create(
-                name: "AudioClip " + item.Value + " id: " + id.ToString(),
-                lengthSamples: audioClipLengthsReplay[item.Value], // length is correct
-                channels: 1,
-                frequency: SAMPLINGFREQ,
-                stream: false);
-                audioSource.ignoreListenerPause = false;
-                audioSource.spatialBlend = 1.0f;
-                //audioSource.Play();
-                Debug.Log(audioSource.clip.name + " length: " + audioClipLengthsReplay[item.Value]);
-                replayedAudioSources.Add(item.Value, audioSource);
-               
-                audioClipPositions.Add(item.Value, 0);
-                clipNumberToLatency.Add(item.Value, 0);
+                var newId = recRep.replayer.oldNewIds[item.Key];
+                var clipLength = audioClipLengthsReplay[item.Value];
+                // remotely
+                var cm = JsonUtility.ToJson(new CreateMessage() { id = newId, clipNr = item.Value, clipLength = clipLength });
+                context.SendJson(new Message() { id = 0, messageType = cm });
+                //locally
+                CreateAudioClip(newId, item.Value, clipLength);
 
                 //audioSource.Play();
-                float[] testClipData = new float[audioClipLengthsReplay[0]];
+                //float[] testClipData = new float[audioClipLengthsReplay[0]];
                 //replayedAudioSources[0].clip.GetData(testClipData, 0);
                 //File.WriteAllText(recRep.path + "/" + "testClipData" + ".csv", string.Join(", ", testClipData));
             }
-            ReadAudioDataFromFile();
 
+            await ReadAudioDataFromFile();
             //OnLoadAudioDataComplete.Invoke(this, EventArgs.Empty);
             
             Debug.Log("AudioClips created!");
-            return true;
+            //return true;
         }
         else
         {
             Debug.Log("Invalid audio file path!");
             recRep.replaying = false;
-            return false;
+            //return false;
         }
     }
+    // creates and audio clip with number clipNr and length clipLength and attaches it to an object with NetworkId id
+    private void CreateAudioClip(NetworkId id, short clipNr, int clipLength)
+    {        
+        var gameObject = spawner.spawned[id];
+        var audioSource = gameObject.AddComponent<AudioSource>();
+        var speechIndicator = gameObject.GetComponentInChildren<SpeechIndicator>();
+        speechIndicator.SetReplayAudioSource(audioSource);
+        speechIndicators.Add(clipNr, speechIndicator);
+        audioSource.clip = AudioClip.Create(
+        name: "AudioClip " + clipNr + " id: " + id.ToString(),
+        lengthSamples: clipLength, // length is correct
+        channels: 1,
+        frequency: SAMPLINGFREQ,
+        stream: false);
+        audioSource.ignoreListenerPause = false;
+        audioSource.spatialBlend = 1.0f;
+        //audioSource.Play();
+        Debug.Log(audioSource.clip.name + " length: " + clipLength);
+        replayedAudioSources.Add(clipNr, audioSource);
 
-    private void ReadAudioDataFromFile()
+        audioClipPositions.Add(clipNr, 0);
+        clipNumberToLatency.Add(clipNr, 0);
+    }
+
+    private async Task ReadAudioDataFromFile()
     {
         Debug.Log("AudioReplayer: ReadAudioDataFromFile");
         //testStreamWriterReplay = new StreamWriter(recRep.path + "/" + testAudioFileReplay + ".csv");
         //audioFileStream.Position = 0;
         byte[] pckgLength = new byte[4];
         byte[] clipNumber = new byte[2];
-        int test = 0;
+        //int test = 0;
         while (audioFileStream.Position < audioFileStream.Length)
         {
             
@@ -636,13 +658,14 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             }
             // set audio data in audio clip
             //Debug.Log("AudioClip positions: " + s + " ");
-            //Debug.Log("AudioClip positions: " + s + " " + audioClipPositions[s]);
-            //if (s == 0)
-            //{
-                replayedAudioSources[s].clip.SetData(floatSamples, audioClipPositions[s]);
-                audioClipPositions[s] += floatSamples.Length; // advance position
+            var clipPos = audioClipPositions[s];
+            Debug.Log("AudioClip positions: " + s + " " + clipPos);
+            var dm = JsonUtility.ToJson(new DataMessage() { clipNr = s, clipPosition = clipPos, floatSamples = floatSamples });
+            context.SendJson(new Message() { id = 1, messageType = dm });
+            replayedAudioSources[s].clip.SetData(floatSamples, clipPos);   
+            audioClipPositions[s] += floatSamples.Length; // advance position
                 //Debug.Log(s + " " + audioClipPositions[s] + " " + replayedAudioSources[s].clip.samples);
-            //}
+            
 
         }
         //testStreamWriterReplay.Dispose();
@@ -659,6 +682,11 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
 
     private void Replayer_OnReplayRepeat(object sender, EventArgs e)
     {
+        context.SendJson(new Message() { id = 4 });
+        Repeat();
+    }
+    private void Repeat()
+    {
         int i = 0;
         foreach (var item in replayedAudioSources)
         {
@@ -672,6 +700,11 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     private void Replayer_OnReplayStopped(object sender, EventArgs e)
     {
         Debug.Log("AudioReplayer: OnReplayStopped");
+        context.SendJson(new Message() { id = 5 });
+        ClearReplay();
+    }
+    private void ClearReplay()
+    {
         pressedPlayFirstTime = false;
         if (objectidToClipNumberReplay != null)
             objectidToClipNumberReplay.Clear();
@@ -683,13 +716,90 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             audioClipLengthsReplay.Clear();
         if (audioClipPositions != null)
             audioClipPositions.Clear();
+        if (clipNumberToLatency != null)
+            clipNumberToLatency.Clear();
         if (audioFileStream != null)
             audioFileStream.Dispose();
     }
 
+    private enum MessageType
+    {
+        Create, // create the audio clips on all remote peers
+        Data, // fill the audio clips on all remote peers with data from the audio file
+        Latency, // sets latency (and mute flags) for clips recorded after master
+        PlayPause, // set clip to play or pause
+        Repeat, // start clip again from beginning + latency
+        End // clear data from last replay
+    }
+    [Serializable]
+    public struct CreateMessage
+    {
+        public NetworkId id;
+        public short clipNr;
+        public int clipLength;
+    }
+    public struct DataMessage
+    {
+        public short clipNr;
+        public float[] floatSamples;
+        public int clipPosition;
+    }
+    public struct LatencyMessage
+    {
+        public int[] latencySamples;
+        public bool[] mute;
+    }
+    public struct PlayPauseMessage
+    {
+        public bool play;
+    }
+
+    public struct Message
+    {
+        public int id;
+        public string messageType;
+    }
+
     public void ProcessMessage(ReferenceCountedSceneGraphMessage message)
     {
-        throw new NotImplementedException();
+        Message m = message.FromJson<Message>();
+        if (m.id == (int)MessageType.Create)
+        {
+            CreateMessage cm = JsonUtility.FromJson<CreateMessage>(m.messageType);
+            CreateAudioClip(cm.id, cm.clipNr, cm.clipLength);
+        }
+        else if (m.id == (int)MessageType.Data)
+        {
+           DataMessage dm = JsonUtility.FromJson<DataMessage>(m.messageType);
+           replayedAudioSources[dm.clipNr].clip.SetData(dm.floatSamples, dm.clipPosition);
+
+        }
+        else if (m.id == (int)MessageType.Latency)
+        {
+            LatencyMessage lm = JsonUtility.FromJson<LatencyMessage>(m.messageType);
+            mute = lm.mute;
+            int i = 0;
+            foreach (var item in replayedAudioSources)
+            {
+                clipNumberToLatency[item.Key] = lm.latencySamples[i];
+                // speech indicators need to know about latency too otherwise there is an error
+                speechIndicators[item.Key].SetLatencySamples(lm.latencySamples[i]);
+                i++;
+            }
+        }
+        else if (m.id == (int)MessageType.PlayPause)
+        {
+            PlayPauseMessage ppm = JsonUtility.FromJson<PlayPauseMessage>(m.messageType);
+            PlayPause(ppm.play);
+        }
+        else if (m.id == (int)MessageType.Repeat)
+        {
+            Repeat();
+        }    
+        else if (m.id == (int)MessageType.End)
+        {
+            ClearReplay();
+        }
     }
 }
 
@@ -730,7 +840,10 @@ public class RecorderReplayerEditor : Editor
 
         if(GUILayout.Button("Apply changes!"))
         {
-            t.MuteAllButMasterClip(masterOnly);
+            if (masterOnly)
+            {
+                t.MuteAllButMasterClip(masterOnly);
+            }
             t.SetLatencies();
         }
         EditorGUI.EndDisabledGroup();
