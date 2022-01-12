@@ -647,7 +647,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     {
         if (roomClient.Me["creator"] == "1")
         {
-            Debug.Log("I record: " + Recording + " " + roomClient.Me.UUID);
+            //Debug.Log("I record: " + Recording + " " + roomClient.Me.UUID);
             roomClient.Room["Recorder"] = JsonUtility.ToJson(new RoomMessage() { peerUuid = roomClient.Me.UUID, isRecording = Recording });
         }
         else
