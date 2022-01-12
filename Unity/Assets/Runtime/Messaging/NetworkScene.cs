@@ -134,7 +134,7 @@ namespace Ubiq.Messaging
 
         private Dictionary<INetworkObject, ObjectProperties> objectProperties = new Dictionary<INetworkObject, ObjectProperties>();
 
-        public NetworkId Id { get; } = NetworkScene.GenerateUniqueId();
+        public NetworkId Id { get; } = new NetworkId("fc127356-581e8e59");//NetworkScene.GenerateUniqueId();
 
         private static NetworkScene rootNetworkScene;
 
@@ -263,7 +263,7 @@ namespace Ubiq.Messaging
             }
 
             objectProperties[networkObject].components[GetComponentId(component)] = component;
-
+            //Debug.Log("Register Component " + component.ToString());
             NetworkContext context = new NetworkContext();
             context.scene = this;
             context.networkObject = networkObject;
