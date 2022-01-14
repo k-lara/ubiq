@@ -618,11 +618,32 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
         context = scene.RegisterComponent(this);
         roomClient = GetComponent<RoomClient>();
         //roomClient.OnPeerRemoved.AddListener(OnPeerRemoved);
+        roomClient.OnJoinedRoom.AddListener(OnJoinedRoom);
         roomClient.OnRoomUpdated.AddListener(OnRoomUpdated);
         roomClient.OnPeerUpdated.AddListener(OnPeerUpdated);
         roomClient.Me["creator"] = "1"; // so recording is also enabled when not being in a room at startup
         roomClient.Room["Recorder"] = JsonUtility.ToJson(new RoomMessage() { peerUuid = roomClient.Me.UUID, isRecording = Recording });
     }
+    public void OnJoinedRoom(IRoom room)
+    {
+        Debug.Log("OnJoinedRoom RecorderReplayer");
+        if (roomClient.Peers.Count() == 0)
+        {
+            Debug.Log("No peers in room, make me creator");
+            roomClient.Me["creator"] = "1";
+        }
+        else if (roomClient.Peers.Count() == 1) // this one has to be the creator so if they leave let me become creator
+        {
+            Debug.Log("Creator in the room, let me become successor");
+            roomClient.Me["creator"] = "2";
+        }
+        else
+        {
+            Debug.Log(roomClient.Peers.Count() + "other peer(s) in the room, someone else is creator");
+            roomClient.Me["creator"] = "0";
+        }
+    }
+
     // if previous authority gets discoonected make sure that recording is stopped when authority is given to the next peer
     // it shouldnt even be necessary to call it here
     public void OnPeerUpdated(IPeer peer)
