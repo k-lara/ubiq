@@ -374,15 +374,28 @@ namespace Ubiq.Rooms
                         {
                             // stop it before authority gets reassigned (expecially if previous authority disconnected)
                             // otherwise new recordings are created but never ended correctly
-                            context.scene.recorder.StopRecording(); 
-                            //Debug.Log("Assign new recorder authority to: " + peers[peers.Keys.First()].UUID);
-                            //var creator = peers[peers.Keys.First()];
-                            //creator["creator"] = "1";
-                            //if (creator.UUID == me.UUID)
-                            //{
+                            context.scene.recorder.StopRecording();
+                            if (me["creator"] == "2") // take over for previous creator and assign new successor
+                            {
+                                Debug.Log("Assign new recorder authority to me!");
                                 me["creator"] = "1";
-                            //}
-                            //OnPeerUpdated.Invoke(creator);
+                                if (peers.Count() >= 1) // check if there is even a potential successor
+                                {
+                                    var newSuccessor = peers.First().Value; 
+                                    newSuccessor["creator"] = "2";
+                                    OnPeerUpdated.Invoke(newSuccessor);
+                                }
+                            }
+                        }
+                        if (peerInfo.properties["creator"] == "2") // successor left
+                        {
+                            if(me["creator"] == "1" && peers.Count() >= 1)
+                            {
+                                var newSuccessor = peers.First().Value;
+                                Debug.Log("Assign new successor authority to: " + newSuccessor.UUID);
+                                newSuccessor["creator"] = "2";
+                                OnPeerUpdated.Invoke(newSuccessor);
+                            }
                         }
                         OnPeerRemoved.Invoke(peerInterface);
                     }
@@ -481,7 +494,7 @@ namespace Ubiq.Rooms
         /// </summary>
         public void Join(string joincode)
         {
-            me["creator"] = "1";
+            me["creator"] = "0";
             actions.Add(() =>
             {
                 SendToServer("Join", new JoinRequest()
@@ -498,7 +511,7 @@ namespace Ubiq.Rooms
         /// </summary>
         public void Join(Guid guid)
         {
-            me["creator"] = "1";
+            me["creator"] = "0";
             actions.Add(() =>
             {
                 SendToServer("Join", new JoinRequest()
