@@ -29,6 +29,7 @@ public class RecorderReplayerMenu : MonoBehaviour
     private Button playPauseButton;
     public Image playPauseImage;
     public Text playPauseText;
+    public Image playPauseTextImage;
     public Text currentReplayFileName; // Current Replay File (top right)
     public Slider slider; // Slider Panel (middle)
     public Text sliderText;
@@ -64,6 +65,11 @@ public class RecorderReplayerMenu : MonoBehaviour
         replayButton = replayBtn.GetComponent<Button>();
         replayButton.interactable = false; // when no replay file is selected replay is not possible
         slider.interactable = false;
+
+        playPauseButton.interactable = false;
+        playPauseImage.color = Color.clear;
+        playPauseText.color = Color.clear;
+        playPauseTextImage.color = Color.clear;
 
         recordings = new List<string>(); // recordings that are shown in scroll view
         newRecordings = new List<string>(); // new recordings that have been added since app start
@@ -106,6 +112,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         {
             GetReplayFilesFromDir();
         }
+        //UpdateMenu(roomClient.Me);
     }
 
     public void OnPeerUpdated(IPeer peer)
@@ -116,7 +123,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         }
     }
 
-    private void UpdateMenu(IPeer peer)
+    private void UpdateMenu(IPeer peer) // this method does not make a lot of sense here, as the RecorderReplayer Panel is inactive in the beginning
     {
         if (peer["creator"] == "1")
         {
@@ -208,6 +215,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         {
             GameObject go = Instantiate(buttonPrefab, content.transform);
             var button = go.GetComponent<Button>();
+            button.image.color = Color.clear;
             button.onClick.AddListener(delegate { SelectReplayFile(file); } );
             //go.GetComponent<Button>().onClick.AddListener(delegate { CloseFileWindow(content); });
             replayFileButtons.Add(button);
@@ -221,6 +229,7 @@ public class RecorderReplayerMenu : MonoBehaviour
     {
         recRep.replayFile = file;
         currentReplayFileName.text = file;
+        currentReplayFileName.color = Color.green;
         replayButton.interactable = true;
     }
 
@@ -267,7 +276,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         }
         recRep.recording = false;
         recRep.replayFile = rec; // is probably set twice (in RecorderReplayer SetReplayFile() too)
-        currentReplayFileName.text = rec;
+        //currentReplayFileName.text = rec;
         infoSet = false;
     }
 
@@ -287,8 +296,14 @@ public class RecorderReplayerMenu : MonoBehaviour
             slider.interactable = false;
             sliderText.text = "";
             playPauseButton.interactable = true; // only clickable during replay
+            playPauseImage.color = new Color(0.0f, 0.8f, 0.2f, 1.0f);
+            playPauseText.color = Color.green;
+            playPauseTextImage.color = new Color(0.65f, 0.65f, 0.65f, 1.0f);
+            
             replayImage.color = new Color(0.0f, 0.8f, 0.2f, 1.0f);
+            replayText.text = "Delete Replay";
             replayText.color = new Color(0.0f, 0.8f, 0.2f, 1.0f);
+            
             recRep.replaying = true;
             resetReplayImage = true;
             slider.minValue = 0;
@@ -299,16 +314,18 @@ public class RecorderReplayerMenu : MonoBehaviour
     {
         slider.interactable = false;
         replayImage.color = white;
+        replayText.text = "Load Replay";
         replayText.color = white;
         recRep.replaying = false;
         resetReplayImage = false;
         playPauseButton.interactable = false;
-        
+        playPauseImage.color = new Color(0.0f, 0.8f, 0.2f, 0.0f);
+        playPauseText.color = new Color(0.0f, 0.0f, 0.0f, 0.0f);
+        playPauseTextImage.color = new Color(0.0f, 0.0f, 0.0f, 0.0f);
+
         // when replay is initialised again the correct sprite is visible in the slider panel
         playPauseImage.sprite = playSprite;
         playPauseText.text = "Play";
-       
-        
     }
 
     public void PlayPauseReplay()
