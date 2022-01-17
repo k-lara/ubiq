@@ -178,8 +178,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     private Dictionary<short, int> clipNumberToLatency = null;
     [SerializeField]
     public int[] latenciesMs;
-    [SerializeField]
-    public int[] latenciesSamples;
+    //[SerializeField]
+    //public int[] latenciesSamples;
     [SerializeField]
     public bool[] mute = null;
     private bool startReadingFromFile = false;
@@ -275,7 +275,13 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         var i = 0;
         foreach (var item in replayedAudioSources)
         {
-            var latency = SetLatency(item.Key, latenciesMs[i]); // latencies are in ms
+            var latency = ComputeLatencySamples(latenciesMs[i]);
+            if (item.Value.timeSamples > 0) // if clip was already playing but latency is adapted afterwards
+            {
+                var newTimeSamples = item.Value.timeSamples - clipNumberToLatency[item.Key] + latency;
+                item.Value.timeSamples = newTimeSamples;
+            }
+            clipNumberToLatency[item.Key] = latency;
 
             // speech indicators need to know about latency too otherwise there is an error
             speechIndicators[item.Key].SetLatencySamples(latency);
@@ -286,13 +292,6 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         context.SendJson(new Message() { id = 2, messageType = lm });
         Debug.Log("Latencies: " + string.Join(", ", latenciesMs));
         Debug.Log("Muted: " + string.Join(", ", mute));
-    }
-
-    public int SetLatency(short clipNr, int ms)
-    {
-        var latency = ComputeLatencySamples(ms);
-        clipNumberToLatency[clipNr] = latency;
-        return latency;
     }
 
     // computes the number of samples that should be skipped at the beginning of the clip to account for latencies
@@ -561,6 +560,27 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
 
         PlayPause(play);
     }
+    // is called by RecorderReplayer during pause and when user jumps to a specific frame in the replay.
+    public void JumpToFrame(int currentFrame, int numberOfFrames)
+    {
+        Debug.Log("ARecRep Jump to Frame: current, total " + currentFrame + " " + numberOfFrames);
+        int[] jumpSamples = new int[replayedAudioSources.Count];
+        int i = 0;
+        foreach (var item in replayedAudioSources)
+        {
+            // calculate current timeSample and add offset from latency computation
+            int jumpSample = (int)((currentFrame / (float)numberOfFrames) * (item.Value.clip.samples)) + clipNumberToLatency[item.Key];
+            
+            Debug.Log((currentFrame / (float)numberOfFrames) + " " + clipNumberToLatency[item.Key] + " Jump to " + jumpSample);
+            jumpSamples[i] = jumpSample;
+            item.Value.timeSamples = jumpSample;
+
+            i++;
+        }
+
+        var jm = JsonUtility.ToJson(new JumpMessage() {  });
+        context.SendJson(new Message() { id = 7, messageType = jm });
+    }
 
     // gets called once recording info is loaded in the Replayer and replayed objects are created!
     public void OnLoadingReplay(RecordingInfo recInfo)
@@ -744,7 +764,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             }
             if (startReadingFromFile)
             {
-                ReadAudioDataFromFile(2);
+                ReadAudioDataFromFile(4);
             }
 
             if (recRep.replaying && recRep.play && (Time.unscaledTime - refTime) >= 5.0f)
@@ -815,7 +835,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         PlayPause, // set clip to play or pause
         Repeat, // start clip again from beginning + latency
         End, // clear data from last replay
-        Sync // to make sure that audio clips are running somewhat in sync on the remote clients
+        Sync, // to make sure that audio clips are running somewhat in sync on the remote clients
+        Jump // jump to different position in clip based on the current jumped frame
     }
     [Serializable]
     public struct CreateMessage
@@ -843,6 +864,11 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     public struct SyncMessage
     {
         public int[] timeSamples;
+    }
+    // i know it is the same as SyncMessage...
+    public struct JumpMessage
+    {
+        public int[] jumpSamples;
     }
     public struct Message
     {
@@ -874,6 +900,11 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             int i = 0;
             foreach (var item in replayedAudioSources)
             {
+                if (item.Value.timeSamples > 0)
+                {
+                    var newTimeSamples = item.Value.timeSamples - clipNumberToLatency[item.Key] + lm.latencySamples[i];
+                    item.Value.timeSamples = newTimeSamples;
+                }
                 clipNumberToLatency[item.Key] = lm.latencySamples[i];
                 // speech indicators need to know about latency too otherwise there is an error
                 speechIndicators[item.Key].SetLatencySamples(lm.latencySamples[i]);
@@ -883,6 +914,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         else if (m.id == (int)MessageType.PlayPause)
         {
             PlayPauseMessage ppm = JsonUtility.FromJson<PlayPauseMessage>(m.messageType);
+            Debug.Log("PlayPauseMessage: " + ppm.play);
             if (ppm.play)
             {
                 int i = 0;
@@ -911,6 +943,17 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             {
                 SyncClip(item.Value, sm.timeSamples[i]);
                 item.Value.UnPause();
+                i++;
+            }
+        }
+        else if (m.id == (int)MessageType.Jump)
+        {
+            JumpMessage jm = JsonUtility.FromJson<JumpMessage>(m.messageType);
+            int i = 0;
+            foreach (var item in replayedAudioSources)
+            {
+                Debug.Log("Jump to: " + jm.jumpSamples[i]);
+                item.Value.timeSamples = jm.jumpSamples[i];
                 i++;
             }
         }
@@ -951,7 +994,7 @@ public class RecorderReplayerEditor : Editor
     public override void OnInspectorGUI()
     {
         // disable GUI when no replay is loaded and while replay is playing (to avoid weird behaviour)
-        //EditorGUI.BeginDisabledGroup(!t.recRep.replaying || (t.recRep.replaying && t.recRep.play));
+        EditorGUI.BeginDisabledGroup(!t.recRep.replaying || (t.recRep.replaying && t.recRep.play));
 
         //The variables and GameObject from the GameObject script are displayed in the Inspector and have the appropriate label
         EditorGUILayout.LabelField(new GUIContent("Audio Clips are ordered from newest (most latency) to oldest."));
@@ -972,7 +1015,7 @@ public class RecorderReplayerEditor : Editor
             }
             t.SetLatencies();
         }
-        //EditorGUI.EndDisabledGroup();
+        EditorGUI.EndDisabledGroup();
 
     }
 }

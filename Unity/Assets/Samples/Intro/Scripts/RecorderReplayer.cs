@@ -185,6 +185,7 @@ public class Replayer
     public event EventHandler OnReplayRepeat;
     public event EventHandler<bool> OnReplayPaused;
     public event EventHandler OnReplayStopped;
+    public event EventHandler OnPointerUpSlider;
 
     private NetworkSpawner spawner;
 
@@ -212,6 +213,7 @@ public class Replayer
         replayedObjects = new Dictionary<NetworkId, ReplayedObjectProperties>();
         oldNewIds = new Dictionary<NetworkId, NetworkId>();
         spawner = recRep.spawner;
+        recRep.menuRecRep.OnPointerUp += MenuRecRep_OnPointerUp;
     }
 
     public void Replay(string replayFile)
@@ -257,51 +259,85 @@ public class Replayer
                 }
             }
         }
-        else // !play 
+        //else // !play 
+        //{
+        //    // TODO: consider cleaning up the complete recording whenever jumping to a frame.
+        //    if (loaded)
+        //    {
+        //        //Debug.Log("!play");
+        //        if(recRep.currentReplayFrame < recRep.sliderFrame)
+        //        {
+        //            //Debug.Log("after");
+        //            while (recRep.currentReplayFrame < recRep.sliderFrame)
+        //            {
+        //                ReplayFromFile();
+        //                recRep.currentReplayFrame++;
+        //            }
+        //        }
+        //        else if(recRep.currentReplayFrame > recRep.sliderFrame)
+        //        {
+        //            HideAll();
+        //            recRep.currentReplayFrame = 0;
+        //            streamFromFile.Position = 0;
+        //            while (recRep.currentReplayFrame < recRep.sliderFrame)
+        //            {
+        //                ReplayFromFile();
+        //                recRep.currentReplayFrame++;
+        //            }
+        //        }
+        //        Debug.Log(recRep.currentReplayFrame + " " + recRep.sliderFrame);
+        //        recRep.currentReplayFrame = recRep.sliderFrame;
+        //        recRep.stopTime = recInfo.frameTimes[recRep.currentReplayFrame];
+        //        recRep.replayingStartTime = recInfo.frameTimes[recRep.currentReplayFrame];
+        //        ReplayFromFile();
+        //        // jump to correct position in audio clips
+        //        recRep.audioRecRep.JumpToFrame(recRep.currentReplayFrame, recInfo.frames);
+                
+        //    }
+        //}
+    }
+
+    private void MenuRecRep_OnPointerUp(object sender, EventArgs e)
+    {
+        // TODO: consider cleaning up the complete recording whenever jumping to a frame.
+        if (loaded)
         {
-            // TODO: consider cleaning up the complete recording whenever jumping to a frame.
-            if (loaded)
+            //Debug.Log("!play");
+            if (recRep.currentReplayFrame < recRep.sliderFrame)
             {
-                //Debug.Log("!play");
-                if(recRep.currentReplayFrame < recRep.sliderFrame)
+                //Debug.Log("after");
+                while (recRep.currentReplayFrame < recRep.sliderFrame)
                 {
-                    //Debug.Log("after");
-                    while (recRep.currentReplayFrame < recRep.sliderFrame)
-                    {
-                        ReplayFromFile();
-                        recRep.currentReplayFrame++;
-                    }
+                    ReplayFromFile();
+                    recRep.currentReplayFrame++;
                 }
-                else if(recRep.currentReplayFrame > recRep.sliderFrame)
-                {
-                    HideAll();
-                    recRep.currentReplayFrame = 0;
-                    streamFromFile.Position = 0;
-                    while (recRep.currentReplayFrame < recRep.sliderFrame)
-                    {
-                        ReplayFromFile();
-                        recRep.currentReplayFrame++;
-                    }
-                }
-                //Debug.Log("nothing");
-                recRep.currentReplayFrame = recRep.sliderFrame;
-                //Debug.Log(recRep.currentReplayFrame + " " + recRep.sliderFrame);
-                recRep.stopTime = recInfo.frameTimes[recRep.currentReplayFrame];
-                recRep.replayingStartTime = recInfo.frameTimes[recRep.currentReplayFrame];
-                ReplayFromFile();
-
-              
-
             }
+            else if (recRep.currentReplayFrame > recRep.sliderFrame)
+            {
+                HideAll();
+                recRep.currentReplayFrame = 0;
+                streamFromFile.Position = 0;
+                while (recRep.currentReplayFrame < recRep.sliderFrame)
+                {
+                    ReplayFromFile();
+                    recRep.currentReplayFrame++;
+                }
+            }
+            Debug.Log("Jump to frame: " + recRep.currentReplayFrame + " " + recRep.sliderFrame);
+            recRep.currentReplayFrame = recRep.sliderFrame;
+            recRep.stopTime = recInfo.frameTimes[recRep.currentReplayFrame];
+            recRep.replayingStartTime = recInfo.frameTimes[recRep.currentReplayFrame];
+            ReplayFromFile();
+            // jump to correct position in audio clips
+            recRep.audioRecRep.JumpToFrame(recRep.currentReplayFrame, recInfo.frames);
+
         }
     }
 
     private void UpdateFrame()
     {
         recRep.currentReplayFrame++;
-        //!!!!!!!!!!! sometimes the frame number is one too high so maybe just in case for now skip the last frame?
-        // no clue why that happens actually... I do reset all the variables after each recording. (update... I did not reset the previousFrame variable)
-        if (recRep.currentReplayFrame == recInfo.frames) // no -1 for now
+        if (recRep.currentReplayFrame == recInfo.frames)
         {
             OnReplayRepeat.Invoke(this, EventArgs.Empty);
             recRep.currentReplayFrame = 0;
@@ -362,7 +398,7 @@ public class Replayer
         {
             Debug.Log("Load info...");
             recInfo = await LoadRecInfo(filepath);
-            //OnLoadingReplay.Invoke(this, recInfo);
+            OnLoadingReplay.Invoke(this, recInfo);
 
             Debug.Log(recInfo.frames + " " + recInfo.frameTimes.Count + " " + recInfo.pckgSizePerFrame.Count);
             objectsCreated = CreateRecordedObjects();
@@ -534,6 +570,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
 {
     public NetworkScene scene;
     public AudioRecorderReplayer audioRecRep;
+    public RecorderReplayerMenu menuRecRep;
     [HideInInspector] public AvatarManager aManager;
     [HideInInspector] public NetworkSpawner spawner;
     private bool Recording = false; // this variable indicates if a recording is taking place, this doesn't need to be the local recording!
