@@ -54,6 +54,8 @@ public class RecorderReplayerMenu : MonoBehaviour
 
     private List<Button> replayFileButtons;
 
+    public event EventHandler OnPointerUp;
+
     //private event EventHandler<bool> OnPlayPauseReplay;
 
     void Start()
@@ -95,10 +97,18 @@ public class RecorderReplayerMenu : MonoBehaviour
         roomClient.OnPeerAdded.AddListener(OnPeerAdded);
         roomClient.OnJoinedRoom.AddListener(OnJoinedRoom);
 
+        recRep.replayer.OnLoadingReplay += Replayer_OnLoadingReplay;
+
         GetReplayFilesFromDir();
         AddReplayFiles();
     }
-   
+
+    private void Replayer_OnLoadingReplay(object sender, RecorderReplayerTypes.RecordingInfo e)
+    {
+        slider.maxValue = recRep.replayer.recInfo.frames - 1;
+        Debug.Log("Set slider max value: " + slider.maxValue);
+    }
+
     public void OnPeerAdded(IPeer peer)
     {
         Debug.Log("Menu: OnPeerAdded");
@@ -170,6 +180,7 @@ public class RecorderReplayerMenu : MonoBehaviour
     public void OnPointerUpDelegate(PointerEventData data)
     {
         SetReplayFrame();
+        OnPointerUp.Invoke(this, EventArgs.Empty);
     }
 
     private void GetReplayFilesFromDir()
@@ -313,6 +324,8 @@ public class RecorderReplayerMenu : MonoBehaviour
     private void EndReplayAndCleanup()
     {
         slider.interactable = false;
+        slider.value = 0;
+        sliderText.text = "";
         replayImage.color = white;
         replayText.text = "Load Replay";
         replayText.color = white;
@@ -355,7 +368,7 @@ public class RecorderReplayerMenu : MonoBehaviour
 
     public void SetReplayFrame()
     {
-        Debug.Log("Set slider value");
+        Debug.Log("Set slider value on pointer up delegate");
         try
         {
             recRep.sliderFrame = (int)slider.value;
@@ -374,16 +387,18 @@ public class RecorderReplayerMenu : MonoBehaviour
     {
         if(recRep.replaying)
         {
-            if(!infoSet && recRep.replayer.recInfo != null)
-            {
-                infoSet = true;
-                slider.maxValue = recRep.replayer.recInfo.frames-1;
-            }
+            //if(!infoSet && recRep.replayer.recInfo != null)
+            //{
+            //    infoSet = true;
+            //    slider.maxValue = recRep.replayer.recInfo.frames-1;
+            //    Debug.Log("Set slider max value: " + slider.maxValue);
+            //}
 
 
             if (!recRep.play) // only display frame number during pause otherwise it looks confusing because text changes so fast
             {
                 sliderText.text = slider.value.ToString();
+                //Debug.Log(sliderText.text);
             }
             else
             {
