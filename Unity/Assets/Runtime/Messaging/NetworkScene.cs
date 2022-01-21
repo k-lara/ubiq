@@ -134,7 +134,9 @@ namespace Ubiq.Messaging
 
         private Dictionary<INetworkObject, ObjectProperties> objectProperties = new Dictionary<INetworkObject, ObjectProperties>();
 
-        public NetworkId Id { get; } = new NetworkId("fc127356-581e8e59");//NetworkScene.GenerateUniqueId();
+        //public NetworkId Id { get; } = new NetworkId("fc127356-581e8e59");//NetworkScene.GenerateUniqueId();
+        public NetworkId Id { get; } = NetworkScene.GenerateUniqueId();
+
 
         private static NetworkScene rootNetworkScene;
 
@@ -171,10 +173,12 @@ namespace Ubiq.Messaging
             events.Log("Awake", Id, SystemInfo.deviceName, SystemInfo.deviceModel, SystemInfo.deviceUniqueIdentifier);
 
             // Try getting a RecorderReplayer if script is attached to the NetworkScene
-            if(TryGetComponent(out IMessageRecorder recRep))
+            IMessageRecorder rec = GetComponentInChildren<IMessageRecorder>();
+            if (rec != null)
+            //if(TryGetComponentInChildren(out IMessageRecorder recRep))
             {
                 Debug.Log("Set Recorder in NetworkScene");
-                recorder = recRep;
+                recorder = rec;
             }
             else
             {
@@ -409,6 +413,7 @@ namespace Ubiq.Messaging
                                 }
                                 catch (MissingReferenceException e)
                                 {
+                                    Debug.Log("component " + component.ToString() + " " + sgbmessage.objectid.ToString());
                                     if (component is UnityEngine.Object)
                                     {
                                         if (!(component as UnityEngine.Object))
