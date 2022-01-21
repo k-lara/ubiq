@@ -30,9 +30,13 @@ namespace Ubiq.Avatars
             public PositionRotation head;
         }
 
-        private void Start()
+        private void Awake()
         {
             avatar = GetComponent<Avatar>();
+        }
+
+        private void Start()
+        {
             context = NetworkScene.Register(this);
             networkSceneRoot = context.scene.transform;
         }
