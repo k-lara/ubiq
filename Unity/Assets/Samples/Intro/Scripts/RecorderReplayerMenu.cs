@@ -78,7 +78,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         replayFileButtons = new List<Button>(); // buttons showing the recordings in the scroll view
 
         Debug.Log("Set RecorderReplayer in Menu");
-        recRep = scene.GetComponent<RecorderReplayer>();
+        recRep = scene.GetComponentInChildren<RecorderReplayer>();
         audioRecRep = recRep.audioRecRep;
 
         // Changing slider value (adds trigger behaviour)

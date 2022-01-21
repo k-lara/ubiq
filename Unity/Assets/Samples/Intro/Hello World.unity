@@ -121,6 +121,106 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &129701527
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 129701528}
+  - component: {fileID: 129701530}
+  - component: {fileID: 129701529}
+  m_Layer: 0
+  m_Name: RecorderReplayer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &129701528
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 129701527}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 7068762447081937016}
+  m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &129701529
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 129701527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93bc060ade1db334ab107b82e04db914, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scene: {fileID: 1485175370}
+  audioRecRep: {fileID: 129701530}
+  menuRecRep: {fileID: 6214880310175230934}
+  aManager: {fileID: 0}
+  spawner: {fileID: 0}
+  replayFile: 
+  recordFile: 
+  audioRecordFile: 
+  path: 
+  recording: 0
+  replaying: 0
+  play: 0
+  sliderFrame: 0
+  stopTime: 0
+  replayingStartTime: 0
+  loop: 1
+  currentReplayFrame: 0
+  reverse: 0
+  thisTransform: {fileID: 0}
+  leftRoom: 0
+  replayer:
+    recInfo:
+      listLengths: 
+      frames: 0
+      objectidsToClipNumber: []
+      clipNumber: 
+      audioClipLengths: 
+      numberOfObjects: 0
+      objectids: []
+      textures: []
+      prefabs: []
+      frameTimes: []
+      pckgSizePerFrame: 
+      idxFrameStart: 
+  recordingAvailable: 0
+  cleanedUp: 1
+  recordingStartTimeString: 
+--- !u!114 &129701530
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 129701527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3eb86e9707d24014d977dd9d05cfa691, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  recRep: {fileID: 129701529}
+  scene: {fileID: 1485175370}
+  initAudioFile: 0
+  frameNr: 0
+  frameX: 100
+  latenciesMs: 
+  mute: 
 --- !u!1001 &249572096
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -380,18 +480,6 @@ Camera:
     type: 3}
   m_PrefabInstance: {fileID: 1175207191}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1017993047 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7776359862424203267, guid: 4830637ae1dfb6e4cbd0b9e5aaa5785b,
-    type: 3}
-  m_PrefabInstance: {fileID: 6214880310175230933}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 179044b4a27036f4181506fe549c419b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &1175207191
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5352,71 +5440,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 7068762447081937015}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1408692737
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1408692736}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3eb86e9707d24014d977dd9d05cfa691, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  recRep: {fileID: 1408692739}
-  scene: {fileID: 1485175370}
-  latenciesMs: 
-  mute: 
---- !u!114 &1408692739
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1408692736}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 93bc060ade1db334ab107b82e04db914, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  scene: {fileID: 1485175370}
-  audioRecRep: {fileID: 1408692737}
-  menuRecRep: {fileID: 1017993047}
-  aManager: {fileID: 0}
-  spawner: {fileID: 0}
-  replayFile: 
-  recordFile: 
-  audioRecordFile: 
-  path: 
-  recording: 0
-  replaying: 0
-  play: 1
-  sliderFrame: 0
-  stopTime: 0
-  replayingStartTime: 0
-  loop: 1
-  currentReplayFrame: 0
-  reverse: 0
-  thisTransform: {fileID: 0}
-  leftRoom: 0
-  replayer:
-    recInfo:
-      listLengths: 
-      frames: 0
-      objectidsToClipNumber: []
-      clipNumber: 
-      audioClipLengths: 
-      numberOfObjects: 0
-      objectids: []
-      textures: []
-      prefabs: []
-      frameTimes: []
-      pckgSizePerFrame: 
-      idxFrameStart: 
-  recordingAvailable: 0
-  cleanedUp: 1
-  recordingStartTimeString: 
 --- !u!114 &1408692741
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6184,6 +6207,18 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4830637ae1dfb6e4cbd0b9e5aaa5785b, type: 3}
+--- !u!114 &6214880310175230934 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7776359862424203267, guid: 4830637ae1dfb6e4cbd0b9e5aaa5785b,
+    type: 3}
+  m_PrefabInstance: {fileID: 6214880310175230933}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 179044b4a27036f4181506fe549c419b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &7068762447081937015
 PrefabInstance:
   m_ObjectHideFlags: 0

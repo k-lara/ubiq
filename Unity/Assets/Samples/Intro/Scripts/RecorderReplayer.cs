@@ -185,7 +185,6 @@ public class Replayer
     public event EventHandler OnReplayRepeat;
     public event EventHandler<bool> OnReplayPaused;
     public event EventHandler OnReplayStopped;
-    public event EventHandler OnPointerUpSlider;
 
     private NetworkSpawner spawner;
 
@@ -471,7 +470,7 @@ public class Replayer
         catch (Exception e)
         {
             if (e.Source != null)
-                Debug.Log("Network id: " + id + ", Exception source: " + e.Source);
+                Debug.Log("Network id: " + id + ", Component " + rcsgm.componentid);
             foreach(var i in oldNewIds)
             {
                 Debug.Log("old: " + i.Key + " new: " + i.Value);
@@ -653,7 +652,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     {
         thisTransform = gameObject.transform;
         context = scene.RegisterComponent(this);
-        roomClient = GetComponent<RoomClient>();
+        roomClient = scene.GetComponent<RoomClient>();
         //roomClient.OnPeerRemoved.AddListener(OnPeerRemoved);
         roomClient.OnJoinedRoom.AddListener(OnJoinedRoom);
         roomClient.OnRoomUpdated.AddListener(OnRoomUpdated);

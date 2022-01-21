@@ -15,120 +15,23 @@ using Ubiq.Spawning;
 using Ubiq.Samples;
 
 
-[RequireComponent(typeof(RecorderReplayer))]
-public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
+//[RequireComponent(typeof(RecorderReplayer))]
+public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComponent
 {
     public static int SAMPLINGFREQ = 16000;
     public static int NUMSAMPLES = SAMPLINGFREQ * 2;
     public static bool MASTERONLY = false;
+    //public NetworkId Id => new NetworkId("a647002b-053e-4585-8cdc-7e2bd17b0ec2");
+    public NetworkId Id => new NetworkId("fc127356-581e8e54");
+
     // need to know about peer UUIDs, and which avatar had which peer UUID so we can alter during replay assign the correct replayed avatars such that the audio sink positions match.
     // manages the audio sinks from different peer connections to keep track of which peer sends what
-    private class AudioSinkManager
-    {
-        public AudioRecorderReplayer recRepA;
-        public VoipPeerConnection pc;
-        public VoipAudioSourceOutput audioSink;
-        //public Transform sinkTransform;
-        //public string peerUuid;
-        //public short uuid;
-        public List<byte[]> audioMessages;
-        public int samplesLength = 0;
-        public short sinkCLIPNUMBER;
 
-        private int samplesLengthUntilNextWrite = 0;
-        private byte[] u; // sink clip number in bytes
-
-
-        public AudioSinkManager(AudioRecorderReplayer recRepA, VoipPeerConnection pc)
-        {
-            this.pc = pc;
-            audioSink = pc.audioSink;
-            this.recRepA = recRepA;
-            //sinkTransform = audioSink.transform;
-            //peerUuid = pc.PeerUuid;
-            //this.uuid = recRepA.peerUuidToShort[peerUuid];
-
-            audioMessages = new List<byte[]>();
-            audioMessages.Add(new byte[4]); // length of pack (int)
-            audioMessages.Add(new byte[2]); // uuid (short)
-            audioSink.OnAudioSourceRawSample += AudioSink_OnAudioSourceRawSample;
-            recRepA.recRep.recorder.OnRecordingStopped += Recorder_OnRecordingStopped;
-        }
-
-        private void Recorder_OnRecordingStopped(object sender, EventArgs e)
-        {
-            Cleanup();
-        }
-
-        // sets clip number for this sink manager in short and in bytes
-        public void SetClipNumber(short CLIPNUMBER)
-        {
-            sinkCLIPNUMBER = CLIPNUMBER;
-            u = BitConverter.GetBytes(sinkCLIPNUMBER);
-        }
-
-        public void WriteRemainingAudioData()
-        {
-            //Debug.Log("Write audio data at frame: " + recRepA.frameNr);
-            var arr = audioMessages.SelectMany(a => a).ToArray();
-            //Debug.Log("arr length: " + arr.Length + " samplesLength: " + samplesLength);
-            var l = BitConverter.GetBytes(arr.Length - 4); // only need length of package not length of package + 4 byte of length
-            arr[0] = l[0]; arr[1] = l[1]; arr[2] = l[2]; arr[3] = l[3];
-            u = BitConverter.GetBytes(sinkCLIPNUMBER);
-            arr[4] = u[0]; arr[5] = u[1];
-            recRepA.binaryWriterAudio.Write(arr);   
-        }
-
-        public void Cleanup()
-        {
-            audioMessages.Clear();
-            samplesLength = 0;
-            samplesLengthUntilNextWrite = 0;
-        }
-
-        // record audio from peer connections
-        private void AudioSink_OnAudioSourceRawSample(SIPSorceryMedia.Abstractions.AudioSamplingRatesEnum samplingRate, uint durationMilliseconds, short[] sample)
-        {
-            if (recRepA.initAudioFile) // can only be true if recording is true and audio file has been initialised
-            {
-                samplesLength += sample.Length;
-                samplesLengthUntilNextWrite += sample.Length;
-
-                // accumulate samples
-                var tempSamples = new byte[sample.Length * sizeof(short)];
-                for (var i = 0; i < sample.Length; i++)
-                {
-                    var tmpSmpl = BitConverter.GetBytes(sample[i]);
-                    tempSamples[i * 2] = tmpSmpl[0];
-                    tempSamples[i * 2 + 1] = tmpSmpl[1];
-                }
-
-                audioMessages.Add(tempSamples);
-
-                // MANAGER!!! NOT MAIN CLASS
-                // after x frames, write audio sample pack to file
-                if ((recRepA.frameNr % recRepA.frameX) == 0) // maybe do it after x samples? might make it easier to get a regular amount over the network
-                //if (samplesLengthUntilNextWrite >= NUMSAMPLES)
-                {
-                    var arr = audioMessages.SelectMany(a => a).ToArray();
-                    var l = BitConverter.GetBytes(arr.Length - 4); // only need length of package not length of package + 4 byte of length
-                    arr[0] = l[0]; arr[1] = l[1]; arr[2] = l[2]; arr[3] = l[3];
-                    u = BitConverter.GetBytes(sinkCLIPNUMBER);
-                    arr[4] = u[0]; arr[5] = u[1];
-                    recRepA.binaryWriterAudio.Write(arr);
-                    audioMessages.Clear();
-                    audioMessages.Add(new byte[4]); // length of pack (int)
-                    audioMessages.Add(u); // clip number (short)
-                    samplesLengthUntilNextWrite = 0;
-                }
-            }
-        }
-    }
     private void OnPeerConnection(VoipPeerConnection pc)
     {
         Debug.Log("AudioRecorder OnPeerConnection: " + pc.PeerUuid);
         peerUuidToConnection = voipConnectionManager.peerUuidToConnection; // update dictionary with new peer connection
-        AudioSinkManager sinkManager = new AudioSinkManager(this, pc); // creates listener for raw audio samples
+        AudioRecorderSinkManager sinkManager = new AudioRecorderSinkManager(this, pc); // creates listener for raw audio samples
         sinkManager.SetClipNumber(CLIPNUMBER++);
         peerUuidToAudioSinkManager.Add(pc.PeerUuid, sinkManager); // list of all the sink managers
         
@@ -153,18 +56,18 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     // audio recording
     private VoipPeerConnectionManager voipConnectionManager;
     private Dictionary<string, VoipPeerConnection> peerUuidToConnection; // do not clear after recording
-    private Dictionary<string, AudioSinkManager> peerUuidToAudioSinkManager; // do not clear after recording
+    private Dictionary<string, AudioRecorderSinkManager> peerUuidToAudioSinkManager; // do not clear after recording
     private Dictionary<NetworkId, short> objectidToClipNumber; // should be fine for replays of replays, also this is what we save as metadata
     private VoipMicrophoneInput audioSource; // audio from local peer who records 
-    private bool initAudioFile = false;
-    private BinaryWriter binaryWriterAudio;
+    public bool initAudioFile = false; // AudioRecorderSinkManager needs it
+    public BinaryWriter binaryWriterAudio; // AudioRecorderSinkManager needs it
     private List<byte[]> audioMessages = null; // collects audio samples from several frames and gathers them in a pack for writing it to file
     private List<int> audioClipLengths = new List<int>();
-    private int frameNr = 0;
-    private int frameX = 100; // after frameX frames write audio samples to file
+    public int frameNr = 0;
+    public int frameX = 100; // after frameX frames write audio samples to file
     private int samplesLength = 0; // length of all current recorded samples
     private int samplesLengthUntilNextWrite = 0;
-    private string testAudioFile = "testAudio"; // test file saving float values to check if data is correct
+    //private string testAudioFile = "testAudio"; // test file saving float values to check if data is correct
     //private StreamWriter testStreamWriter = null;
     private List<short[]> testSamples = new List<short[]>();
     private byte[] u = new byte[2]; // clip number
@@ -191,11 +94,13 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     private Dictionary<short, int> replayedAudioClipsRecordedLength = null; // when recording a replay to know until when to record a replay
     private bool pressedPlayFirstTime = false;
     private float refTime = 0.0f;
-    private float currentTime = 0.0f;
+    //private float currentTime = 0.0f;
     private int[] currentTimeSamplesPerClip;
 
     // audio clip creation
     private float gain = 1.0f;
+
+
     // replay test file
     //private string testAudioFileReplay = "testAudioReplay"; // test file saving float values to check if data is correct
     //private StreamWriter testStreamWriterReplay = null;
@@ -211,16 +116,16 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     // Start is called before the first frame update
     void Start()
     {
-        roomClient = GetComponent<RoomClient>();
+        //scene = GetComponent<NetworkScene>();
         recRep = GetComponent<RecorderReplayer>();
-        scene = GetComponent<NetworkScene>();
+        roomClient = scene.GetComponent<RoomClient>();
+        voipConnectionManager = scene.GetComponentInChildren<VoipPeerConnectionManager>();
+        avatarManager = scene.GetComponentInChildren<AvatarManager>();
+        spawner = scene.GetComponentInChildren<NetworkSpawner>();
         context = scene.RegisterComponent(this);
         // get voippeerconnectionmanager to get audio source and sinks
-        voipConnectionManager = GetComponentInChildren<VoipPeerConnectionManager>();
-        avatarManager = GetComponentInChildren<AvatarManager>();
-        spawner = GetComponentInChildren<NetworkSpawner>();
         peerUuidToConnection = voipConnectionManager.peerUuidToConnection; // update when peers are added or removed
-        peerUuidToAudioSinkManager = new Dictionary<string, AudioSinkManager>(); // update when peers are added or removed
+        peerUuidToAudioSinkManager = new Dictionary<string, AudioRecorderSinkManager>(); // update when peers are added or removed
         //peerUuidToShort = new Dictionary<string, short>(); // fill anew for every new recording
         objectidToClipNumber = new Dictionary<NetworkId, short>();
         replayedAudioSources = new Dictionary<short, AudioSource>();
@@ -253,7 +158,6 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     {
         return clipNumberToLatency;
     }
-
     public Dictionary<short, AudioSource> GetReplayAudioSources()
     {
         return replayedAudioSources;
@@ -370,11 +274,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
                 samplesLengthUntilNextWrite = 0;
 
                 WriteReplayedClipsToFile(); // running clips from previous recording if there are any
-
             }
         }
     }
-    // the cool thing is that this should also record when the clip is not playing! oh no no .... this is not the case obviously!
     private void WriteReplayedClipsToFile()
     {
         foreach (var item in replayedAudioSources)
@@ -453,16 +355,19 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
         Debug.Log("AudioRecorder OnRecordingStopped");
         //Debug.Log("Write audio data at frame: " + frameNr);
         var arr = audioMessages.SelectMany(a => a).ToArray();
-        //Debug.Log("arr length: " + arr.Length + " samplesLength: " + samplesLength);
-        var l = BitConverter.GetBytes(arr.Length - 4); // only need length of package not length of package + 4 byte of length
-        arr[0] = l[0]; arr[1] = l[1]; arr[2] = l[2]; arr[3] = l[3];
-        arr[4] = u[0]; arr[5] = u[1];
-        binaryWriterAudio.Write(arr);
-        //testStreamWriter.WriteLine(BitConverter.ToInt32(l, 0) + ", " + sourceCLIPNUMBER + ", " + string.Join(", ", testSamples.SelectMany(a => a).ToArray()) + ",");
+        if (arr.Length > 6) // 4 bytes for int package length and 2 bytes for short clip number (if > 6 audioMessages also has data, otherwise not)
+        {
+            //Debug.Log("arr length: " + arr.Length + " samplesLength: " + samplesLength);
+            var l = BitConverter.GetBytes(arr.Length - 4); // only need length of package not length of package + 4 byte of length
+            arr[0] = l[0]; arr[1] = l[1]; arr[2] = l[2]; arr[3] = l[3];
+            arr[4] = u[0]; arr[5] = u[1];
+            binaryWriterAudio.Write(arr);
+            //testStreamWriter.WriteLine(BitConverter.ToInt32(l, 0) + ", " + sourceCLIPNUMBER + ", " + string.Join(", ", testSamples.SelectMany(a => a).ToArray()) + ",");
+        }
         audioMessages.Clear();
         samplesLengthUntilNextWrite = 0;
 
-        foreach (var manager in peerUuidToAudioSinkManager.Values)
+        foreach (var manager in peerUuidToAudioSinkManager.Values) // write last samples from audio sink manager
         {
             manager.WriteRemainingAudioData();
         }
@@ -879,7 +784,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
     public void ProcessMessage(ReferenceCountedSceneGraphMessage message)
     {
         Message m = message.FromJson<Message>();
-        Debug.Log("AudioRecorderReplayer ProcessMessage id: " + m.id);
+        //Debug.Log("AudioRecorderReplayer ProcessMessage id: " + m.id);
         if (m.id == (int)MessageType.Create)
         {
             CreateMessage cm = JsonUtility.FromJson<CreateMessage>(m.messageType);
@@ -952,6 +857,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkComponent
             int i = 0;
             foreach (var item in replayedAudioSources)
             {
+                Debug.Log("clips " + replayedAudioSources.Count);
+                Debug.Log("jum samples size: " + jm.jumpSamples.Length);
+                Debug.Log("i " + i);
                 Debug.Log("Jump to: " + jm.jumpSamples[i]);
                 item.Value.timeSamples = jm.jumpSamples[i];
                 i++;
@@ -1007,7 +915,7 @@ public class RecorderReplayerEditor : Editor
         // Apply changes to the serializedProperty - always do this in the end of OnInspectorGUI.
         serializedObject.ApplyModifiedProperties();
 
-        if(GUILayout.Button("Apply changes!"))
+        if (GUILayout.Button("Apply changes!"))
         {
             if (masterOnly)
             {
