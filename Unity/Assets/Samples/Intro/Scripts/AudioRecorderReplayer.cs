@@ -483,7 +483,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             i++;
         }
 
-        var jm = JsonUtility.ToJson(new JumpMessage() {  });
+        var jm = JsonUtility.ToJson(new JumpMessage() { jumpSamples = jumpSamples });
         context.SendJson(new Message() { id = 7, messageType = jm });
     }
 
