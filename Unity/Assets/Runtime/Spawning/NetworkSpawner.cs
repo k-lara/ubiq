@@ -227,19 +227,33 @@ namespace Ubiq.Spawning
 
         public void UnspawnPersistent(NetworkId networkId)
         {
-            context.SendJson(new Message() { networkId = networkId, remove = true}); // is this necessary? no right
+            Debug.Log("Unspawn Persistent id: " + networkId.ToString());
+           
             var key = $"SpawnedObject-{ networkId }";
             // if OnLeftRoom is called too the objects are destroyed there and not here
             if (spawned.ContainsKey(networkId))
             {
-                Destroy(spawned[networkId]);
-                //spawned.Remove(networkId); Ben did that
-            }
-            // send a hide message so the recording knows when the object should be invisible
-            spawned[networkId].gameObject.GetComponent<ObjectHider>().SetNetworkedObjectLayer(8);
+                if (spawned[networkId] != null)
+                {
+                    Destroy(spawned[networkId]); // object is destroyed after the current update loop
+                    // send a hide message so the recording knows when the object should be invisible
+                    spawned[networkId].gameObject.GetComponent<ObjectHider>().SetNetworkedObjectLayer(8);
+                    //spawned.Remove(networkId); Ben did that
 
+                    if (roomClient.Me["creator"] == "1")
+                    {
+                        // if this is not called, remote objects are just rendered invisible until creator leaves and OnPeerRemoved is called
+                        // after creator has left the next creator has already been assigned
+                        Debug.Log("Send from UnspawnPersistent");
+                        context.SendJson(new Message() { networkId = networkId, remove = true });
+                    }
+                }
+                else
+                {
+                    Debug.Log("Object has already been removed!");
+                }
+            }
             roomClient.Room[key] = JsonUtility.ToJson(new Message() {networkId = networkId, remove = true});
-            //Debug.Log("UnspawnPersistent " + networkId.ToString() + "  " + roomClient.Room[key]);
         }
 
         public void UpdateProperties(NetworkId networkId, string type, object arg)
@@ -292,6 +306,7 @@ namespace Ubiq.Spawning
             }
         }
         // if a recording authority disconnects completely make sure the replays disappear too (and the menu indicators maybe?)
+        // this gets called after a new creator has been assigned in case the old creator left
         private void OnPeerRemoved(IPeer peer)
         {
             Debug.Log("NetworkSpawner: OnPeerRemoved");
@@ -302,7 +317,6 @@ namespace Ubiq.Spawning
                     if (item.Key.StartsWith("SpawnedObject"))
                     {
                         var msg = JsonUtility.FromJson<Message>(item.Value);
-
                         UnspawnPersistent(msg.networkId); // remove 
 
                     }

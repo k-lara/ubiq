@@ -413,7 +413,7 @@ namespace Ubiq.Messaging
                                 }
                                 catch (MissingReferenceException e)
                                 {
-                                    Debug.Log("component " + component.ToString() + " " + sgbmessage.objectid.ToString());
+                                    Debug.Log("component " + component.ToString() + " " + " cid " + sgbmessage.componentid +  " oid " +  sgbmessage.objectid.ToString());
                                     if (component is UnityEngine.Object)
                                     {
                                         if (!(component as UnityEngine.Object))
