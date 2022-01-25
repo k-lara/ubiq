@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.IO;
-using System.Threading.Tasks;
 using Ubiq.Messaging;
 using Ubiq.Rooms;
 using Ubiq.Voip;
@@ -18,8 +17,8 @@ using Ubiq.Samples;
 //[RequireComponent(typeof(RecorderReplayer))]
 public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComponent
 {
-    public static int SAMPLINGFREQ = 16000;
-    public static int NUMSAMPLES = SAMPLINGFREQ * 2;
+    public const int SAMPLINGFREQ = 16000;
+    public const int NUMSAMPLES = SAMPLINGFREQ * 2;
     public static bool MASTERONLY = false;
     //public NetworkId Id => new NetworkId("a647002b-053e-4585-8cdc-7e2bd17b0ec2");
     public NetworkId Id => new NetworkId("fc127356-581e8e54");
@@ -191,9 +190,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             speechIndicators[item.Key].SetLatencySamples(latency);
             i++;
         }
-        var lm = JsonUtility.ToJson(new LatencyMessage() { latencySamples = clipNumberToLatency.Values.ToArray(), mute = mute });
-        Debug.Log(lm);
-        context.SendJson(new Message() { id = 2, messageType = lm });
+        SendAudioMessage(new AudioMessage() { messageId = 2, timeSamples = clipNumberToLatency.Values.ToArray(), muteClips = mute });
         Debug.Log("Latencies: " + string.Join(", ", latenciesMs));
         Debug.Log("Muted: " + string.Join(", ", mute));
     }
@@ -256,8 +253,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             audioMessages.Add(tempSamples);
 
             // after x frames, write audio sample pack to file
-            if ((frameNr % frameX) == 0)
-            //if (samplesLengthUntilNextWrite >= (16000 * 2) )
+            //if ((frameNr % frameX) == 0)
+            if (samplesLengthUntilNextWrite >= NUMSAMPLES )
             {
                 //Debug.Log("Write audio data at frame: " + frameNr);
                 var arr = audioMessages.SelectMany(a => a).ToArray();
@@ -398,8 +395,6 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         replayedAudioClipsRecordedLength.Clear();
         clipNumberToLatency.Clear();
     }
-
-    // 
     private void PlayAndConsiderLatency(AudioSource audioSource, int samples)
     {
         audioSource.Play();
@@ -460,9 +455,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             currentTimeSamplesPerClip[i] = item.Value.timeSamples;
             i++;
         }
-        var ppm = JsonUtility.ToJson(new PlayPauseMessage() { play = play, timeSamples = currentTimeSamplesPerClip });
-        context.SendJson(new Message() { id = 3, messageType = ppm });
-
+        //var ppm = JsonUtility.ToJson(new PlayPauseMessage() { play = play, timeSamples = currentTimeSamplesPerClip });
+        //context.SendJson(new Message() { id = 3, messageType = ppm });
+        SendAudioMessage(new AudioMessage() { messageId = 3, timeSamples = currentTimeSamplesPerClip, play = play } );
         PlayPause(play);
     }
     // is called by RecorderReplayer during pause and when user jumps to a specific frame in the replay.
@@ -475,16 +470,17 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         {
             // calculate current timeSample and add offset from latency computation
             int jumpSample = (int)((currentFrame / (float)numberOfFrames) * (item.Value.clip.samples)) + clipNumberToLatency[item.Key];
-            
-            Debug.Log((currentFrame / (float)numberOfFrames) + " " + clipNumberToLatency[item.Key] + " Jump to " + jumpSample);
+
+            //Debug.Log((currentFrame / (float)numberOfFrames) + " " + clipNumberToLatency[item.Key] + " Jump to " + jumpSample);
             jumpSamples[i] = jumpSample;
             item.Value.timeSamples = jumpSample;
 
             i++;
         }
 
-        var jm = JsonUtility.ToJson(new JumpMessage() { jumpSamples = jumpSamples });
-        context.SendJson(new Message() { id = 7, messageType = jm });
+        //var jm = JsonUtility.ToJson(new JumpMessage() { jumpSamples = jumpSamples });
+        //context.SendJson(new Message() { id = 7, messageType = jm });
+        SendAudioMessage(new AudioMessage() { messageId = 7, timeSamples = jumpSamples});
     }
 
     // gets called once recording info is loaded in the Replayer and replayed objects are created!
@@ -517,8 +513,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 var newId = recRep.replayer.oldNewIds[item.Key];
                 var clipLength = audioClipLengthsReplay[item.Value];
                 // remotely
-                var cm = JsonUtility.ToJson(new CreateMessage() { id = newId, clipNr = item.Value, clipLength = clipLength });
-                context.SendJson(new Message() { id = 0, messageType = cm });
+                //var cm = JsonUtility.ToJson(new CreateMessage() { id = newId, clipNr = item.Value, clipLength = clipLength });
+                //context.SendJson(new Message() { id = 0, messageType = cm });
+                SendAudioMessage(new AudioMessage() { messageId = 0, objectId = newId, clipNr = item.Value, clipLengthPos = clipLength});
                 //locally
                 CreateAudioClip(newId, item.Value, clipLength);
 
@@ -545,7 +542,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     // creates and audio clip with number clipNr and length clipLength and attaches it to an object with NetworkId id
     private void CreateAudioClip(NetworkId id, short clipNr, int clipLength)
     {
-        Debug.Log("AudioRecorderReplayer CreateAudioClip");
+        //Debug.Log("AudioRecorderReplayer CreateAudioClip");
         var gameObject = spawner.spawned[id];
         var audioSource = gameObject.AddComponent<AudioSource>();
         var speechIndicator = gameObject.GetComponentInChildren<SpeechIndicator>();
@@ -599,16 +596,18 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     }
 
     // iterations specifies how often the while loop should iterate during one Update() call
-    private void ReadAudioDataFromFile(int iterations)
+    private AudioMessage ReadAudioDataFromFile(int iterations)
     {
-        Debug.Log("AudioReplayer: ReadAudioDataFromFile");
-        int iter = 0;
-        //testStreamWriterReplay = new StreamWriter(recRep.path + "/" + testAudioFileReplay + ".csv");
-        //audioFileStream.Position = 0;
+        //Debug.Log("AudioReplayer: ReadAudioDataFromFile");
+        //int iter = 0;
+        int clipPos; 
         byte[] pckgLength = new byte[4];
         byte[] clipNumber = new byte[2];
+        byte[] audioPckg = null;
+        AudioMessage audioMessage = new AudioMessage();
         //int test = 0;
-        while (audioFileStream.Position < audioFileStream.Length)
+        if (audioFileStream.Position < audioFileStream.Length)
+        //while (audioFileStream.Position < audioFileStream.Length)
         {
             
             //Debug.Log("stream position " + audioFileStream.Position);
@@ -619,11 +618,14 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 
             int l = BitConverter.ToInt32(pckgLength, 0) - 2; // pckgLength/2 = length samples
             short s = BitConverter.ToInt16(clipNumber, 0);
+            clipPos = audioClipPositions[s];
 
             //Debug.Log("sizes: " + l + " " + s);
-            byte[] audioPckg = new byte[l]; // contains audio data without bytes for short "uuid"
+            audioPckg = new byte[l]; // contains audio data without bytes for short "uuid"
             audioFileStream.Read(audioPckg, 0, audioPckg.Length);
             //Debug.Log("stream position " + audioFileStream.Position);
+
+            //SendAudioMessage(new AudioMessage() { messageId = 1, clipNr = s, clipLengthPos = audioClipPositions[s], samples = audioPckg});
 
             // convert samples to float
             float[] floatSamples = new float[audioPckg.Length / 2];
@@ -636,28 +638,30 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 floatSamples[i/2] = Mathf.Clamp(floatSample * gain, -.999f, .999f);
             }
             // set audio data in audio clip
-            //Debug.Log("AudioClip positions: " + s + " ");
-            var clipPos = audioClipPositions[s];
-            Debug.Log("AudioClip positions: " + s + " " + clipPos);
-            var dm = JsonUtility.ToJson(new DataMessage() { clipNr = s, clipPosition = clipPos, floatSamples = floatSamples });
-            context.SendJson(new Message() { id = 1, messageType = dm });
-
+            //Debug.Log("AudioClip positions: " + s + " " + clipPos);
+            audioMessage = new AudioMessage() { messageId = 1, clipNr = s, clipLengthPos = audioClipPositions[s], samples = audioPckg };
             replayedAudioSources[s].clip.SetData(floatSamples, clipPos);   
             audioClipPositions[s] += floatSamples.Length; // advance position
-                                                          //Debug.Log(s + " " + audioClipPositions[s] + " " + replayedAudioSources[s].clip.samples);
 
-            iter++;
-            if (iter == iterations)
-                return;
+            //iter++;
+            //if (iter == iterations)
+            //{
+            //    return new AudioMessage() { messageId = 1, clipNr = s, clipLengthPos = audioClipPositions[s], samples = audioPckg };
+            //}
         }
         if (audioFileStream.Position >= audioFileStream.Length)
         {
             Debug.Log("Finished reading audio data!");
             startReadingFromFile = false;
         }
+        return audioMessage;
         //testStreamWriterReplay.Dispose();
     }
 
+    private const int MAXPCKGS = 48000;
+    private int pckgSamples = MAXPCKGS;
+    private float deltaReadingTime = 0.025f; // 25ms
+    private float startTime = 0.0f;
     // Update is called once per frame
     void Update()
     {
@@ -669,7 +673,24 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             }
             if (startReadingFromFile)
             {
-                ReadAudioDataFromFile(4);
+                if (deltaReadingTime >= 0.025f)
+                {
+                    while (pckgSamples > 0)
+                    {
+                        AudioMessage amsg = ReadAudioDataFromFile(1);
+                        if (amsg.samples == null)
+                        {
+                            break;
+                        }
+                        SendAudioMessage(amsg);
+                        pckgSamples -= amsg.samples.Length;
+                       
+                    }
+                    pckgSamples = MAXPCKGS;
+                    startTime = Time.unscaledTime;
+                }
+
+                deltaReadingTime = Time.unscaledTime - startTime;
             }
 
             if (recRep.replaying && recRep.play && (Time.unscaledTime - refTime) >= 5.0f)
@@ -682,15 +703,16 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                     currentTimeSamplesPerClip[i] = item.Value.timeSamples;
                     i++;
                 }
-                var sm = JsonUtility.ToJson(new SyncMessage() { timeSamples = currentTimeSamplesPerClip });
-                context.SendJson(new Message() { id = 6, messageType = sm });
+                //var sm = JsonUtility.ToJson(new SyncMessage() { timeSamples = currentTimeSamplesPerClip });
+                //context.SendJson(new Message() { id = 6, messageType = sm });
+                SendAudioMessage(new AudioMessage() { messageId = 6, timeSamples = currentTimeSamplesPerClip});
             }
         }
     }
 
     private void Replayer_OnReplayRepeat(object sender, EventArgs e)
     {
-        context.SendJson(new Message() { id = 4 });
+        SendAudioMessage(new AudioMessage() { messageId = 4});
         Repeat();
     }
     private void Repeat()
@@ -708,7 +730,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     private void Replayer_OnReplayStopped(object sender, EventArgs e)
     {
         Debug.Log("AudioReplayer: OnReplayStopped");
-        context.SendJson(new Message() { id = 5 });
+        //context.SendJson(new Message() { id = 5 });
+        SendAudioMessage(new AudioMessage() { messageId = 5});
         ClearReplay();
     }
     private void ClearReplay()
@@ -744,128 +767,289 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         Jump // jump to different position in clip based on the current jumped frame
     }
     [Serializable]
-    public struct CreateMessage
+    private struct AudioMessage
     {
-        public NetworkId id;
+        public byte messageId; // 1 byte
+
+        public NetworkId objectId;
         public short clipNr;
-        public int clipLength;
-    }
-    public struct DataMessage
-    {
-        public short clipNr;
-        public float[] floatSamples;
-        public int clipPosition;
-    }
-    public struct LatencyMessage
-    {
-        public int[] latencySamples;
-        public bool[] mute;
-    }
-    public struct PlayPauseMessage
-    {
+        public int clipLengthPos;
+        public byte[] samples;
+        public int[] timeSamples;
+        public bool[] muteClips;
         public bool play;
-        public int[] timeSamples;
+        //public byte[] message; // x bytes
+        
+        // byteMessage includes 10 byte header for ReferenceCountedMessage
+        public byte[] MessageToBytes()
+        {
+            byte[] byteMessage = null;
+            byte[] cn;
+
+            switch (messageId)
+            {
+                case (int)MessageType.Create:
+                    //Debug.Log("objectid " + objectId.ToString());
+                    //Debug.Log("clipnr: " + clipNr);
+                    //Debug.Log("cliplength: " + clipLengthPos);
+
+                    byteMessage = new byte[10 + 1 + 14]; // NetworkId 8 bytes, clipNr 2 bytes, clipLength 4 bytes
+                    //Debug.Log("byteMessage length: " + byteMessage.Length);
+
+                    byteMessage[10] = messageId;
+                    byte[] oid = new byte[8]; 
+                    objectId.ToBytes(oid, 0);
+                    cn = BitConverter.GetBytes(clipNr);
+                    byte[] l = BitConverter.GetBytes(clipLengthPos);
+                    Array.Copy(oid, 0, byteMessage, 10 + 1, oid.Length);
+                    Array.Copy(cn, 0, byteMessage, 10 + 1 + oid.Length, cn.Length);
+                    Array.Copy(l, 0, byteMessage, 10 + 1 + oid.Length + cn.Length, l.Length);
+                    break;
+
+                case (int)MessageType.Data:
+                    byteMessage = new byte[10 + 1 + 6 + samples.Length]; // clipNr 2 bytes, clipPosition 4 bytes, samples samples.Length bytes
+                    //Debug.Log("byteMessage length: " + byteMessage.Length);
+
+                    byteMessage[10] = messageId;
+                    cn = BitConverter.GetBytes(clipNr);
+                    //Debug.Log("clipnr: " + clipNr);
+                    //Debug.Log("clipPos: " + clipLengthPos);
+                    //Debug.Log("samples length: " + samples.Length);
+                    byte[] p = BitConverter.GetBytes(clipLengthPos);
+                    Array.Copy(cn, 0, byteMessage, 10 + 1, cn.Length);
+                    Array.Copy(p, 0, byteMessage, 10 + 1 + cn.Length, p.Length);
+                    Array.Copy(samples, 0, byteMessage, 10 + 1 + cn.Length + p.Length, samples.Length);
+                    break;
+                case (int)MessageType.Latency:
+                case (int)MessageType.PlayPause:
+                case (int)MessageType.Sync:
+                case (int)MessageType.Jump:
+                    if (muteClips == null)
+                    {
+                        muteClips = new bool[timeSamples.Length];
+                    }
+                    //Debug.Log("Timesamples length: " + timeSamples.Length);
+                    //Debug.Log("muteClips length: " + muteClips.Length);
+                    //Debug.Log("play: " + play);
+                    byteMessage = new byte[10 + 1 + timeSamples.Length * 4 + muteClips.Length * 1 + 1]; // timeSamples.Length * 4 bytes, muteClips.Length * 1 bytes, bool play 1 byte
+                    //Debug.Log("byteMessage length: " + byteMessage.Length);
+
+                    byteMessage[10] = messageId;
+                    for (int i = 0; i < timeSamples.Length; i++)
+                    {
+                        byte[] ts = BitConverter.GetBytes(timeSamples[i]);
+                        Array.Copy(ts, 0, byteMessage, 10 + 1 + 4 * i, ts.Length);
+                        byte[] mc = BitConverter.GetBytes(muteClips[i]);
+                        Array.Copy(mc, 0, byteMessage, 10 + 1 + timeSamples.Length * 4 + i, mc.Length);
+                    }
+                    byte[] pp = BitConverter.GetBytes(play);
+                    Array.Copy(pp, 0, byteMessage, byteMessage.Length - 1, pp.Length);
+                    break;
+                case (int)MessageType.Repeat:
+                case (int)MessageType.End:
+                    byteMessage = new byte[10 + 1];
+                    byteMessage[10] = messageId;
+                    //Debug.Log("byteMessage length: " + byteMessage.Length);
+                    //Debug.Log("MessageType: Repeat or End");
+                    break;
+                default:
+                    Debug.Log("Something went wrong");
+                    break;
+            }
+            return byteMessage;
+        }
+
+        public void BytesToMessage(byte[] bytes)
+        {
+            messageId = bytes[10];
+            //Debug.Log("message id: " + messageId);
+            switch (messageId)
+            {
+                case (int)MessageType.Create:
+                    objectId = new NetworkId(bytes, 10 + 1);
+                    clipNr = BitConverter.ToInt16(bytes, 10 + 9); // 1 + 8
+                    clipLengthPos = BitConverter.ToInt32(bytes, 10 + 11); // 1 + 8 + 2
+                     Debug.Log("Create " + objectId.ToString() + " " + clipNr + " " + clipLengthPos);
+                    break;
+
+                case (int)MessageType.Data:
+                    clipNr = BitConverter.ToInt16(bytes, 10 + 1);
+                    clipLengthPos = BitConverter.ToInt32(bytes, 10 + 3); // 1 + 2
+                    //Debug.Log("Data " + clipNr + " " + clipLengthPos + " " + bytes.Length);
+                    samples = new byte[bytes.Length - (10 + 7)];
+                    Array.Copy(bytes, 10 + 7, samples, 0, bytes.Length - (10 + 7));
+
+                    break;
+                case (int)MessageType.Latency:
+                case (int)MessageType.PlayPause:
+                case (int)MessageType.Sync:
+                case (int)MessageType.Jump:
+                    int arrLength = bytes.Length - (10 + 2);
+                    int clips = 0;
+                    for (int i = 0; i < arrLength; i+=4) // what the hack... to figure out how many clips the arrays have
+                    {
+                        arrLength -= 1;
+                        clips++;
+                    }
+                    timeSamples = new int[clips];
+                    muteClips = new bool[clips];
+                    for (int c = 0; c < clips; c++)
+                    {
+                        timeSamples[c] = BitConverter.ToInt32(bytes, 10 + 1 + 4 * c);
+                        muteClips[c] = BitConverter.ToBoolean(bytes, 10 + 1 + 4 * clips + c);
+                    }
+                    play = BitConverter.ToBoolean(bytes, bytes.Length - 1);
+                    //Debug.Log("LPSJ: " + string.Join(", ", timeSamples) + " " + string.Join(", ", muteClips) + " " + play); 
+                    break;
+                case (int)MessageType.Repeat:
+                case (int)MessageType.End:
+                    Debug.Log("MessageType: Repeat or End");
+                    break;
+                default:
+                    Debug.Log("Something went wrong");
+                    break;
+            }
+        }
+
+        public AudioMessage(byte[] rcsgm)
+        {
+            messageId = 0; // 1 byte
+            objectId = new NetworkId(0);
+            clipNr = 0;
+            clipLengthPos = 0;
+            samples = null;
+            timeSamples = null;
+            muteClips = null;
+            play = false;
+            BytesToMessage(rcsgm);
+        }
+
     }
-    public struct SyncMessage
+    private ReferenceCountedSceneGraphMessage CreateRCSGM (byte[] msg)
     {
-        public int[] timeSamples;
+        //Debug.Log(string.Join(",", msg));
+        Ubiq.Networking.ReferenceCountedMessage rcm = new Ubiq.Networking.ReferenceCountedMessage(msg);
+        //Debug.Log(rcm.bytes.Length);
+        ReferenceCountedSceneGraphMessage rcsgm = new ReferenceCountedSceneGraphMessage(rcm);
+        rcsgm.objectid = Id;
+        rcsgm.componentid = context.componentId;
+        return rcsgm;
     }
-    // i know it is the same as SyncMessage...
-    public struct JumpMessage
+
+    private void SendAudioMessage(AudioMessage audioMessage)
     {
-        public int[] jumpSamples;
-    }
-    public struct Message
-    {
-        public int id;
-        public string messageType;
+        var rcsgm = CreateRCSGM(audioMessage.MessageToBytes());
+        context.Send(rcsgm);
     }
 
     public void ProcessMessage(ReferenceCountedSceneGraphMessage message)
     {
-        Message m = message.FromJson<Message>();
+        var msg = new byte[message.length + 10]; // just take header and message
+        Buffer.BlockCopy(message.bytes, 0, msg, 0, message.length + 10);
+        AudioMessage m = new AudioMessage(msg);
+        //AudioMessage m = message.FromJson<AudioMessage>();
         //Debug.Log("AudioRecorderReplayer ProcessMessage id: " + m.id);
-        if (m.id == (int)MessageType.Create)
+        if (m.messageId == (int)MessageType.Create)
         {
-            CreateMessage cm = JsonUtility.FromJson<CreateMessage>(m.messageType);
-            CreateRemoteAudioClip(cm.id, cm.clipNr, cm.clipLength);
+            //CreateMessage cm = JsonUtility.FromJson<CreateMessage>(m.messageType);
+            CreateRemoteAudioClip(m.objectId, m.clipNr, m.clipLengthPos);
         }
-        else if (m.id == (int)MessageType.Data)
+        else if (m.messageId == (int)MessageType.Data)
         {
-            DataMessage dm = JsonUtility.FromJson<DataMessage>(m.messageType);
-            fromRemoteReplayedClips[dm.clipNr].SetData(dm.floatSamples, dm.clipPosition);
-            //replayedAudioSources[dm.clipNr].clip.SetData(dm.floatSamples, dm.clipPosition);
+            Debug.Log("Write data to clip");
+            //DataMessage dm = JsonUtility.FromJson<DataMessage>(m.messageType);
+            var floatSamples = ConvertToFloat(m.samples);
+            fromRemoteReplayedClips[m.clipNr].SetData(floatSamples, m.clipLengthPos);
+            //replayedAudioSources[dm.clipNr].clip.SetData(dm.floatSamples, dm.clipPosition); audio source with avatar might not exist yet
 
         }
-        else if (m.id == (int)MessageType.Latency)
+        else if (m.messageId == (int)MessageType.Latency)
         {
-            LatencyMessage lm = JsonUtility.FromJson<LatencyMessage>(m.messageType);
-            Debug.Log("ProcessMessage latencies and mute: " + lm.latencySamples + " " + lm.mute);
-            mute = lm.mute;
+            //LatencyMessage lm = JsonUtility.FromJson<LatencyMessage>(m.messageType);
+            Debug.Log("ProcessMessage latencies and mute: " + m.timeSamples + " " + m.muteClips);
+            mute = m.muteClips;
             int i = 0;
             foreach (var item in replayedAudioSources)
             {
                 if (item.Value.timeSamples > 0)
                 {
-                    var newTimeSamples = item.Value.timeSamples - clipNumberToLatency[item.Key] + lm.latencySamples[i];
+                    var newTimeSamples = item.Value.timeSamples - clipNumberToLatency[item.Key] + m.timeSamples[i];
                     item.Value.timeSamples = newTimeSamples;
                 }
-                clipNumberToLatency[item.Key] = lm.latencySamples[i];
+                clipNumberToLatency[item.Key] = m.timeSamples[i];
                 // speech indicators need to know about latency too otherwise there is an error
-                speechIndicators[item.Key].SetLatencySamples(lm.latencySamples[i]);
+                speechIndicators[item.Key].SetLatencySamples(m.timeSamples[i]);
                 i++;
             }
         }
-        else if (m.id == (int)MessageType.PlayPause)
+        else if (m.messageId == (int)MessageType.PlayPause)
         {
-            PlayPauseMessage ppm = JsonUtility.FromJson<PlayPauseMessage>(m.messageType);
-            Debug.Log("PlayPauseMessage: " + ppm.play);
-            if (ppm.play)
+            //PlayPauseMessage ppm = JsonUtility.FromJson<PlayPauseMessage>(m.messageType);
+            Debug.Log("PlayPauseMessage: " + m.play);
+            if (m.play)
             {
                 int i = 0;
                 foreach (var item in replayedAudioSources)
                 {
-                    SyncClip(item.Value, ppm.timeSamples[i]);
+                    SyncClip(item.Value, m.timeSamples[i]);
                     i++;
                 }
             }
-            PlayPause(ppm.play);
+            PlayPause(m.play);
         }
-        else if (m.id == (int)MessageType.Repeat)
+        else if (m.messageId == (int)MessageType.Repeat)
         {
             Repeat();
         }
-        else if (m.id == (int)MessageType.End)
+        else if (m.messageId == (int)MessageType.End)
         {
             ClearReplay();
         }
-        else if (m.id == (int)MessageType.Sync)
+        else if (m.messageId == (int)MessageType.Sync)
         {
-            SyncMessage sm = JsonUtility.FromJson<SyncMessage>(m.messageType);
+            //SyncMessage sm = JsonUtility.FromJson<SyncMessage>(m.messageType);
             // update timeSamples position only if 
             int i = 0;
             foreach (var item in replayedAudioSources)
             {
-                SyncClip(item.Value, sm.timeSamples[i]);
+                SyncClip(item.Value, m.timeSamples[i]);
                 item.Value.UnPause();
                 i++;
             }
         }
-        else if (m.id == (int)MessageType.Jump)
+        else if (m.messageId == (int)MessageType.Jump)
         {
-            JumpMessage jm = JsonUtility.FromJson<JumpMessage>(m.messageType);
+            //JumpMessage jm = JsonUtility.FromJson<JumpMessage>(m.messageType);
             int i = 0;
             foreach (var item in replayedAudioSources)
             {
-                Debug.Log("clips " + replayedAudioSources.Count);
-                Debug.Log("jum samples size: " + jm.jumpSamples.Length);
-                Debug.Log("i " + i);
-                Debug.Log("Jump to: " + jm.jumpSamples[i]);
-                item.Value.timeSamples = jm.jumpSamples[i];
+                //Debug.Log("clips " + replayedAudioSources.Count);
+                //Debug.Log("jum samples size: " + m.timeSamples.Length);
+                //Debug.Log("i " + i);
+                Debug.Log("Jump to: " + m.timeSamples[i]);
+                item.Value.timeSamples = m.timeSamples[i];
                 i++;
             }
         }
     }
+
+    private float[] ConvertToFloat(byte[] samples)
+    {
+        //Debug.Log("samples: " + string.Join(", ", samples));
+        //Debug.Log("samples length: " + samples.Length);
+        // convert samples to float
+        float[] floatSamples = new float[samples.Length / 2];
+        //Debug.Log("floatSamples length: " + floatSamples.Length);
+        for (int i = 0; i < samples.Length; i += 2)
+        {
+            short sample = BitConverter.ToInt16(samples, i);
+            //Debug.Log("short sample: " + sample);
+            var floatSample = ((float)sample) / short.MaxValue;
+            floatSamples[i / 2] = Mathf.Clamp(floatSample * gain, -.999f, .999f);
+        }
+        return floatSamples;
+    }
+
     private void SyncClip(AudioSource source, int timeSample)
     {
         if (Math.Abs(source.timeSamples - timeSample) >= SAMPLINGFREQ)

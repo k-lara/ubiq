@@ -7,6 +7,9 @@ using System;
 
 public class AudioRecorderSinkManager
 {
+    public const int SAMPLINGFREQ = 16000;
+    public const int NUMSAMPLES = SAMPLINGFREQ * 2;
+
     public AudioRecorderReplayer recRepA;
     public VoipPeerConnection pc;
     public VoipAudioSourceOutput audioSink;
@@ -92,8 +95,8 @@ public class AudioRecorderSinkManager
 
             // MANAGER!!! NOT MAIN CLASS
             // after x frames, write audio sample pack to file
-            if ((recRepA.frameNr % recRepA.frameX) == 0) // maybe do it after x samples? might make it easier to get a regular amount over the network
-                                                         //if (samplesLengthUntilNextWrite >= NUMSAMPLES)
+            //if ((recRepA.frameNr % recRepA.frameX) == 0) // maybe do it after x samples? might make it easier to get a regular amount over the network
+            if (samplesLengthUntilNextWrite >= NUMSAMPLES)
             {
                 var arr = audioMessages.SelectMany(a => a).ToArray();
                 var l = BitConverter.GetBytes(arr.Length - 4); // only need length of package not length of package + 4 byte of length

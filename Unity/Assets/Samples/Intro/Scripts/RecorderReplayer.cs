@@ -714,7 +714,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
             {
                 RoomMessage msg = JsonUtility.FromJson<RoomMessage>(room["Recorder"]);
                 Recording = msg.isRecording;
-                Debug.Log("Someone records: " + Recording);
+                //Debug.Log("Someone records: " + Recording);
             }
             else
             {
