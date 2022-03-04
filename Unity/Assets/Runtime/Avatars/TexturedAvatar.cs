@@ -125,7 +125,7 @@ namespace Ubiq.Samples
                 }
                 if (avatar.Peer.UUID == null && !avatar.IsLocal) // e.g. recorded avatar which does not represent a valid peer
                 {
-                    Debug.Log("Local send texture: " + uuid);
+                    //Debug.Log("Local send texture: " + uuid);
                     //context.SendJson(new Message(uuid));
                 }
             }

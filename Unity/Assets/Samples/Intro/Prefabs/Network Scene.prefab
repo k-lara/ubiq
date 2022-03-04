@@ -1,5 +1,105 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &3621865187524130748
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2726516570072676079}
+  - component: {fileID: 6347490601592851195}
+  - component: {fileID: 5374876515141628037}
+  m_Layer: 0
+  m_Name: RecorderReplayer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2726516570072676079
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3621865187524130748}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 7068762446378101729}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6347490601592851195
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3621865187524130748}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3eb86e9707d24014d977dd9d05cfa691, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  recRep: {fileID: 5374876515141628037}
+  scene: {fileID: 0}
+  initAudioFile: 0
+  frameNr: 0
+  frameX: 100
+  latenciesMs: 
+  mute: 
+--- !u!114 &5374876515141628037
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3621865187524130748}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93bc060ade1db334ab107b82e04db914, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scene: {fileID: 0}
+  audioRecRep: {fileID: 6347490601592851195}
+  menuRecRep: {fileID: 0}
+  aManager: {fileID: 0}
+  spawner: {fileID: 0}
+  replayFile: 
+  recordFile: 
+  audioRecordFile: 
+  path: 
+  recording: 0
+  replaying: 0
+  play: 0
+  sliderFrame: 0
+  stopTime: 0
+  replayingStartTime: 0
+  loop: 1
+  currentReplayFrame: 0
+  reverse: 0
+  thisTransform: {fileID: 0}
+  leftRoom: 0
+  replayer:
+    recInfo:
+      listLengths: 
+      frames: 0
+      objectidsToClipNumber: []
+      clipNumber: 
+      audioClipLengths: 
+      numberOfObjects: 0
+      objectids: []
+      textures: []
+      prefabs: []
+      frameTimes: []
+      pckgSizePerFrame: 
+      idxFrameStart: 
+  recordingAvailable: 0
+  cleanedUp: 1
+  recordingStartTimeString: 
 --- !u!1 &7068762446051028577
 GameObject:
   m_ObjectHideFlags: 0
@@ -77,6 +177,7 @@ Transform:
   - {fileID: 7068762446560339092}
   - {fileID: 7068762446826474294}
   - {fileID: 995552508608854795}
+  - {fileID: 2726516570072676079}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

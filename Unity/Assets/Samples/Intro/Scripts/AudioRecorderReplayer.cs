@@ -20,6 +20,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     public const int SAMPLINGFREQ = 16000;
     public const int NUMSAMPLES = SAMPLINGFREQ * 2;
     public static bool MASTERONLY = false;
+    private bool audioDataAvailable = false;
     //public NetworkId Id => new NetworkId("a647002b-053e-4585-8cdc-7e2bd17b0ec2");
     public NetworkId Id => new NetworkId("fc127356-581e8e54");
 
@@ -463,7 +464,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     // is called by RecorderReplayer during pause and when user jumps to a specific frame in the replay.
     public void JumpToFrame(int currentFrame, int numberOfFrames)
     {
-        Debug.Log("ARecRep Jump to Frame: current, total " + currentFrame + " " + numberOfFrames);
+        //Debug.Log("ARecRep Jump to Frame: current, total " + currentFrame + " " + numberOfFrames);
         int[] jumpSamples = new int[replayedAudioSources.Count];
         int i = 0;
         foreach (var item in replayedAudioSources)
@@ -490,7 +491,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         Debug.Log("Audiorec filepath: " + filepath);
         if (File.Exists(filepath))
         {
-            Debug.Log("Get audio file...");
+            //Debug.Log("Get audio file...");
 
             objectidToClipNumberReplay = recInfo.objectidsToClipNumber.Zip(recInfo.clipNumber, (k, v) => new { k, v }).ToDictionary(x => x.k, x => x.v);
             audioClipLengthsReplay = recInfo.clipNumber.Zip(recInfo.audioClipLengths, (k, v) => new { k, v }).ToDictionary(x => x.k, x => x.v);
@@ -525,7 +526,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 //File.WriteAllText(recRep.path + "/" + "testClipData" + ".csv", string.Join(", ", testClipData));
             }
             startReadingFromFile = true;
-
+            audioDataAvailable = true;
             //await ReadAudioDataFromFile();
             //OnLoadAudioDataComplete.Invoke(this, EventArgs.Empty);
             
@@ -534,8 +535,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         }
         else
         {
-            Debug.Log("Invalid audio file path!");
-            recRep.replaying = false;
+            audioDataAvailable = audioDataAvailable || false;
+            Debug.Log("Invalid audio file path or no audio file path exists!");
+            //recRep.replaying = false; // should still be possible to replay even without audio
             //return false;
         }
     }
@@ -667,45 +669,48 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     {
         if (roomClient.Me["creator"] == "1")
         {
-            if (recRep.recording)
+            if (audioDataAvailable) // otherwise don't bother
             {
-                frameNr++;
-            }
-            if (startReadingFromFile)
-            {
-                if (deltaReadingTime >= 0.025f)
+                if (recRep.recording)
                 {
-                    while (pckgSamples > 0)
+                    frameNr++;
+                }
+                if (startReadingFromFile)
+                {
+                    if (deltaReadingTime >= 0.025f)
                     {
-                        AudioMessage amsg = ReadAudioDataFromFile(1);
-                        if (amsg.samples == null)
+                        while (pckgSamples > 0)
                         {
-                            break;
-                        }
-                        SendAudioMessage(amsg);
-                        pckgSamples -= amsg.samples.Length;
+                            AudioMessage amsg = ReadAudioDataFromFile(1);
+                            if (amsg.samples == null)
+                            {
+                                break;
+                            }
+                            SendAudioMessage(amsg);
+                            pckgSamples -= amsg.samples.Length;
                        
+                        }
+                        pckgSamples = MAXPCKGS;
+                        startTime = Time.unscaledTime;
                     }
-                    pckgSamples = MAXPCKGS;
-                    startTime = Time.unscaledTime;
+
+                    deltaReadingTime = Time.unscaledTime - startTime;
                 }
 
-                deltaReadingTime = Time.unscaledTime - startTime;
-            }
-
-            if (recRep.replaying && recRep.play && (Time.unscaledTime - refTime) >= 5.0f)
-            {
-                refTime = 0.0f;
-                currentTimeSamplesPerClip = new int[replayedAudioSources.Count];
-                int i = 0;
-                foreach (var item in replayedAudioSources)
+                if (recRep.replaying && recRep.play && (Time.unscaledTime - refTime) >= 5.0f)
                 {
-                    currentTimeSamplesPerClip[i] = item.Value.timeSamples;
-                    i++;
+                    refTime = 0.0f;
+                    currentTimeSamplesPerClip = new int[replayedAudioSources.Count];
+                    int i = 0;
+                    foreach (var item in replayedAudioSources)
+                    {
+                        currentTimeSamplesPerClip[i] = item.Value.timeSamples;
+                        i++;
+                    }
+                    //var sm = JsonUtility.ToJson(new SyncMessage() { timeSamples = currentTimeSamplesPerClip });
+                    //context.SendJson(new Message() { id = 6, messageType = sm });
+                    SendAudioMessage(new AudioMessage() { messageId = 6, timeSamples = currentTimeSamplesPerClip});
                 }
-                //var sm = JsonUtility.ToJson(new SyncMessage() { timeSamples = currentTimeSamplesPerClip });
-                //context.SendJson(new Message() { id = 6, messageType = sm });
-                SendAudioMessage(new AudioMessage() { messageId = 6, timeSamples = currentTimeSamplesPerClip});
             }
         }
     }
@@ -737,6 +742,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     private void ClearReplay()
     {
         pressedPlayFirstTime = false;
+        audioDataAvailable = false;
         if (objectidToClipNumberReplay != null)
             objectidToClipNumberReplay.Clear();
         if (speechIndicators != null)
@@ -869,7 +875,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                     objectId = new NetworkId(bytes, 10 + 1);
                     clipNr = BitConverter.ToInt16(bytes, 10 + 9); // 1 + 8
                     clipLengthPos = BitConverter.ToInt32(bytes, 10 + 11); // 1 + 8 + 2
-                     Debug.Log("Create " + objectId.ToString() + " " + clipNr + " " + clipLengthPos);
+                     //Debug.Log("Create " + objectId.ToString() + " " + clipNr + " " + clipLengthPos);
                     break;
 
                 case (int)MessageType.Data:
@@ -1065,51 +1071,51 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 }
 
 # if UNITY_EDITOR
-[CustomEditor(typeof(AudioRecorderReplayer))]
-public class RecorderReplayerEditor : Editor
-{
-    AudioRecorderReplayer t;
-    SerializedProperty Latencies;
-    SerializedProperty Mute;
-    bool masterOnly;
-    //SerializedProperty MasterOnly;
+//[CustomEditor(typeof(AudioRecorderReplayer))]
+//public class RecorderReplayerEditor : Editor
+//{
+//    AudioRecorderReplayer t;
+//    SerializedProperty Latencies;
+//    SerializedProperty Mute;
+//    bool masterOnly;
+//    //SerializedProperty MasterOnly;
 
-    void OnEnable()
-    {
-        t = (AudioRecorderReplayer)target;
-        // Fetch the objects from script to display in the inspector
-        Latencies = serializedObject.FindProperty("latenciesMs");
-        Mute = serializedObject.FindProperty("mute");
-        //MasterOnly = serializedObject.FindProperty("MASTERONLY");
-    }
+//    void OnEnable()
+//    {
+//        t = (AudioRecorderReplayer)target;
+//        // Fetch the objects from script to display in the inspector
+//        Latencies = serializedObject.FindProperty("latenciesMs");
+//        Mute = serializedObject.FindProperty("mute");
+//        //MasterOnly = serializedObject.FindProperty("MASTERONLY");
+//    }
 
-    public override void OnInspectorGUI()
-    {
-        // disable GUI when no replay is loaded and while replay is playing (to avoid weird behaviour)
-        EditorGUI.BeginDisabledGroup(!t.recRep.replaying || (t.recRep.replaying && t.recRep.play));
+//    public override void OnInspectorGUI()
+//    {
+//        // disable GUI when no replay is loaded and while replay is playing (to avoid weird behaviour)
+//        EditorGUI.BeginDisabledGroup(!t.recRep.replaying || (t.recRep.replaying && t.recRep.play));
 
-        //The variables and GameObject from the GameObject script are displayed in the Inspector and have the appropriate label
-        EditorGUILayout.LabelField(new GUIContent("Audio Clips are ordered from newest (most latency) to oldest."));
-        EditorGUILayout.PropertyField(Latencies, new GUIContent("Latency: "));
-        EditorGUILayout.Space();
-        masterOnly = EditorGUILayout.Toggle("Master Only ", masterOnly);
-        EditorGUILayout.PropertyField(Mute, new GUIContent("Mute: "));
+//        //The variables and GameObject from the GameObject script are displayed in the Inspector and have the appropriate label
+//        EditorGUILayout.LabelField(new GUIContent("Audio Clips are ordered from newest (most latency) to oldest."));
+//        EditorGUILayout.PropertyField(Latencies, new GUIContent("Latency: "));
+//        EditorGUILayout.Space();
+//        masterOnly = EditorGUILayout.Toggle("Master Only ", masterOnly);
+//        EditorGUILayout.PropertyField(Mute, new GUIContent("Mute: "));
 
 
-        // Apply changes to the serializedProperty - always do this in the end of OnInspectorGUI.
-        serializedObject.ApplyModifiedProperties();
+//        // Apply changes to the serializedProperty - always do this in the end of OnInspectorGUI.
+//        serializedObject.ApplyModifiedProperties();
 
-        if (GUILayout.Button("Apply changes!"))
-        {
-            if (masterOnly)
-            {
-                t.MuteAllButMasterClip(masterOnly);
-            }
-            t.SetLatencies();
-        }
-        EditorGUI.EndDisabledGroup();
+//        if (GUILayout.Button("Apply changes!"))
+//        {
+//            if (masterOnly)
+//            {
+//                t.MuteAllButMasterClip(masterOnly);
+//            }
+//            t.SetLatencies();
+//        }
+//        EditorGUI.EndDisabledGroup();
 
-    }
-}
+//    }
+//}
 # endif
 

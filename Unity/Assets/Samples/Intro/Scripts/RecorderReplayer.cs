@@ -182,6 +182,7 @@ public class Replayer
     RecorderReplayer recRep;
 
     public event EventHandler<RecordingInfo> OnLoadingReplay;
+    public event EventHandler OnReplayLoaded;
     public event EventHandler OnReplayRepeat;
     public event EventHandler<bool> OnReplayPaused;
     public event EventHandler OnReplayStopped;
@@ -258,42 +259,6 @@ public class Replayer
                 }
             }
         }
-        //else // !play 
-        //{
-        //    // TODO: consider cleaning up the complete recording whenever jumping to a frame.
-        //    if (loaded)
-        //    {
-        //        //Debug.Log("!play");
-        //        if(recRep.currentReplayFrame < recRep.sliderFrame)
-        //        {
-        //            //Debug.Log("after");
-        //            while (recRep.currentReplayFrame < recRep.sliderFrame)
-        //            {
-        //                ReplayFromFile();
-        //                recRep.currentReplayFrame++;
-        //            }
-        //        }
-        //        else if(recRep.currentReplayFrame > recRep.sliderFrame)
-        //        {
-        //            HideAll();
-        //            recRep.currentReplayFrame = 0;
-        //            streamFromFile.Position = 0;
-        //            while (recRep.currentReplayFrame < recRep.sliderFrame)
-        //            {
-        //                ReplayFromFile();
-        //                recRep.currentReplayFrame++;
-        //            }
-        //        }
-        //        Debug.Log(recRep.currentReplayFrame + " " + recRep.sliderFrame);
-        //        recRep.currentReplayFrame = recRep.sliderFrame;
-        //        recRep.stopTime = recInfo.frameTimes[recRep.currentReplayFrame];
-        //        recRep.replayingStartTime = recInfo.frameTimes[recRep.currentReplayFrame];
-        //        ReplayFromFile();
-        //        // jump to correct position in audio clips
-        //        recRep.audioRecRep.JumpToFrame(recRep.currentReplayFrame, recInfo.frames);
-                
-        //    }
-        //}
     }
 
     private void MenuRecRep_OnPointerUp(object sender, EventArgs e)
@@ -332,19 +297,27 @@ public class Replayer
 
         }
     }
-
     private void UpdateFrame()
     {
         recRep.currentReplayFrame++;
         if (recRep.currentReplayFrame == recInfo.frames)
         {
-            OnReplayRepeat.Invoke(this, EventArgs.Empty);
-            recRep.currentReplayFrame = 0;
-            HideAll();
-            streamFromFile.Position = 0;
-            recRep.replayingStartTime = 0.0f;
-            recRep.stopTime = 0.0f;
-            //Debug.Log("Reset frame");
+            if (!recRep.automatedReplay)
+            {
+                OnReplayRepeat.Invoke(this, EventArgs.Empty);
+                recRep.currentReplayFrame = 0;
+                HideAll();
+                streamFromFile.Position = 0;
+                recRep.replayingStartTime = 0.0f;
+                recRep.stopTime = 0.0f;
+                //Debug.Log("Reset frame");
+            }
+            else // no looping... one replay after the other
+            {
+                recRep.sliderFrame = 0;
+                recRep.replaying = false;
+                OnReplayStopped.Invoke(this, EventArgs.Empty);
+            }
         }
         recRep.sliderFrame = recRep.currentReplayFrame;
     }
@@ -359,7 +332,7 @@ public class Replayer
             GameObject prefab = spawner.catalogue.GetPrefab(prefabName);
             if (prefab == null)
             {
-                Debug.Log("Continue: " + objectid.ToString() + " " + prefabName);
+                //Debug.Log("Continue: " + objectid.ToString() + " " + prefabName);
                 continue;
             }
             GameObject go = spawner.SpawnPersistentReplay(prefab, false, uid, true, new TransformMessage(recRep.thisTransform));
@@ -370,10 +343,10 @@ public class Replayer
                 //props.hider = go.GetComponent<ObjectHider>();
                 props.hider = objectHider;
             }
-            Debug.Log("CreateRecordedObjects():  " + go.name);
+            //Debug.Log("CreateRecordedObjects():  " + go.name);
             NetworkId newId = go.GetComponent<INetworkObject>().Id;
             oldNewIds.Add(objectid, newId);
-            Debug.Log(objectid.ToString() + " new: " + newId.ToString());
+            //Debug.Log(objectid.ToString() + " new: " + newId.ToString());
             props.gameObject = go;
             props.id = newId;
             // Nels' magic leap room threw an error because the posters he had in the room as child game objects cannot be added because the key already exists
@@ -399,7 +372,7 @@ public class Replayer
             recInfo = await LoadRecInfo(filepath);
             OnLoadingReplay.Invoke(this, recInfo);
 
-            Debug.Log(recInfo.frames + " " + recInfo.frameTimes.Count + " " + recInfo.pckgSizePerFrame.Count);
+            //Debug.Log(recInfo.frames + " " + recInfo.frameTimes.Count + " " + recInfo.pckgSizePerFrame.Count);
             objectsCreated = CreateRecordedObjects();
             recRep.audioRecRep.OnLoadingReplay(recInfo);
             Debug.Log("Info loaded!");
@@ -409,7 +382,7 @@ public class Replayer
             Debug.Log("Invalid replay file ID path!");
             recRep.replaying = false;
             loadingStarted = false;
-            
+
         }
 
         filepath = recRep.path + "/" + replayFile + ".dat";
@@ -424,6 +397,11 @@ public class Replayer
             loadingStarted = false;
         }
         loaded = objectsCreated && opened;
+        if (loaded && recRep.automatedReplay)
+        {
+            OnReplayLoaded.Invoke(this, EventArgs.Empty); // once replay is loaded writing motion data do file can start
+            recRep.play = true; // start playing
+        }
     }
     private bool OpenStream(string filepath)
     {
@@ -526,10 +504,11 @@ public class Replayer
     public void Cleanup(bool unspawn)
     {
         OnReplayStopped.Invoke(this, EventArgs.Empty);
-        Debug.Log("Cleanup " + Time.unscaledTime);
+
+        //Debug.Log("Cleanup " + Time.unscaledTime);
         foreach (var i in oldNewIds)
         {
-            Debug.Log("Cleanup ids old: " + i.Key + " new: " + i.Value);
+            //Debug.Log("Cleanup ids old: " + i.Key + " new: " + i.Value);
         }
 
         loadingStarted = loaded = objectsCreated = false;
@@ -597,6 +576,12 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     [HideInInspector] public bool cleanedUp = true;
 
     [HideInInspector] public string recordingStartTimeString;
+
+    public event EventHandler EndAutomatedReplayEvent;
+    public event EventHandler OnPlayNextReplay;
+    [HideInInspector] public bool automatedReplay = false;
+    private int replayNumber = 0; // current index in recordings path file of the RecorderReplayerMenu recordings
+
 
     public void SetRecordingStartTime(string recordingStartTimeString)
     {
@@ -765,7 +750,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     // Update is called once per frame
     void Update()
     {
-       if (roomClient.Me["creator"] == "1") // don't bother if we are not room creators
+        if (roomClient.Me["creator"] == "1") // don't bother if we are not room creators
         {
             //Debug.Log(play);
 
@@ -796,7 +781,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
                     recordingAvailable = false; // avoid unnecessary savings of same info (is checked in methods too)
                 }
             }
-           else
+            else
             {
                 if (!Recording)
                 {
@@ -806,11 +791,23 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
                 }
                 recordingAvailable = true;
             }
-
+            ///////////////// replaying
             if (replaying)
             {
-                replayer.Replay(replayFile);
-                cleanedUp = false;
+                if (!automatedReplay)
+                {
+                    replayer.Replay(replayFile);
+                    cleanedUp = false;
+                }
+                else
+                {
+                    var file = menuRecRep.GetRecording(replayNumber);
+                    if (file != string.Empty)
+                    {
+                        replayer.Replay(file);
+                        cleanedUp = false;
+                    }
+                }
             }
             else
             {
@@ -820,6 +817,23 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
                     replayer.Cleanup(true);
                     replayingStartTime = 0.0f;
                     stopTime = 0.0f;
+
+                    if (automatedReplay)
+                    {
+                        Debug.Log("Replay " + replayNumber + " of " + menuRecRep.NumberOfRecordings() + " finished!");
+                        replayNumber++;
+                        if (replayNumber == menuRecRep.NumberOfRecordings()) // all replays done, end automated replay
+                        {
+                            Debug.Log("End automated replay!");
+                            automatedReplay = false;
+                            EndAutomatedReplayEvent.Invoke(this, EventArgs.Empty);
+                            replayNumber = 0;
+                        }
+                        else
+                        {
+                            replaying = true;
+                        }
+                    }
                 }
             }
         }

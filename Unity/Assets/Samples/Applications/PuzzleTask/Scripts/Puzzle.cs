@@ -68,7 +68,7 @@ public class Puzzle : MonoBehaviour, INetworkObject
             }
         }
 
-        recRep = NetworkScene.FindNetworkScene(this).GetComponent<RecorderReplayer>();
+        recRep = NetworkScene.FindNetworkScene(this).GetComponentInChildren<RecorderReplayer>();
     }
 
     // the NetworkSpawner makes sure that the pieces get removed, but need to remove them from the puzzlePiecesSpawned list too

@@ -24,6 +24,12 @@ public class HandAnimation : MonoBehaviour, INetworkComponent
     private NetworkContext context;
     private Avatar avatar;
 
+    public (float, float) GetGripTargets()
+    {
+        //Debug.Log(gripTargetLeft + " " + gripTargetRight);
+        return (gripTargetLeft, gripTargetRight);
+    }
+
     public struct Message
     {
         //public string animatorGripParam;
@@ -62,6 +68,8 @@ public class HandAnimation : MonoBehaviour, INetworkComponent
             context.SendJson(new Message(gripTargetLeft, gripTargetRight)); // sent every frame currently...put into if() ?
             //Debug.Log("Anim: " + gripCurrent + " " + gripTarget);
         }
+
+        //Debug.Log(gripTargetLeft + " " + gripTargetRight);
 
         if (gripCurrentLeft != gripTargetLeft)
         {

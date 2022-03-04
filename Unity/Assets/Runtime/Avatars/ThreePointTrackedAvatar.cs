@@ -20,10 +20,12 @@ namespace Ubiq.Avatars
         private NetworkContext context;
         private Transform networkSceneRoot;
         private State[] state = new State[1];
-        private Avatar avatar;
+        private Avatar avatar;      
+
+        public State GetState() { return state[0]; }
 
         [Serializable]
-        private struct State
+        public struct State // I made it public
         {
             public PositionRotation leftHand;
             public PositionRotation rightHand;

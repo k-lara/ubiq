@@ -58,7 +58,7 @@ public class ObjectHider : MonoBehaviour, INetworkComponent, ILayer
 // Should be safe to use because a replay usually only takes place in an existing scene that has the context already set.
     void Awake()
     {
-        Debug.Log("ObjectHider Awake()");
+        //Debug.Log("ObjectHider Awake()");
         scene = NetworkScene.FindNetworkScene(this);
         context = scene.RegisterComponent(this);
 
@@ -80,12 +80,12 @@ public class ObjectHider : MonoBehaviour, INetworkComponent, ILayer
         {
             if (avatar.Peer["visible"] == null || avatar.Peer["visible"] == "1")
             {
-                Debug.Log("Show");
+                //Debug.Log("Show");
                 SetLayer(defaultLayer);
             }
             else
             {
-                Debug.Log("Hide");
+                //Debug.Log("Hide");
                 SetLayer(hideLayer);
             }
             //avatar.Peer["visible"] = "1";
@@ -110,16 +110,16 @@ public class ObjectHider : MonoBehaviour, INetworkComponent, ILayer
             return;
         }
         
-        Debug.Log("ObjectHider OnPeerAdded");
+        //Debug.Log("ObjectHider OnPeerAdded");
         Debug.Log(avatar.Peer["visible"]);
         if (avatar.Peer["visible"] == null || avatar.Peer["visible"]  == "1")
         {
-            Debug.Log("Show");
+            //Debug.Log("Show");
             SetLayer(defaultLayer);
         }
         else
         {
-            Debug.Log("Hide");
+            //Debug.Log("Hide");
             SetLayer(hideLayer);
 
         }

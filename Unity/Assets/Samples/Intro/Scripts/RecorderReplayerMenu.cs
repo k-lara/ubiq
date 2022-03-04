@@ -11,6 +11,9 @@ using Ubiq.Samples;
 
 public class RecorderReplayerMenu : MonoBehaviour
 {
+    public event EventHandler<bool> PlayPauseReplayEvent = delegate { };
+    //private bool automatedReplay = false; // replays all the files in the directory one after the other (useful for gathering motion data post-hoc)
+
     public NetworkScene scene;
     public Sprite playSprite;
     public Sprite pauseSprite;
@@ -58,6 +61,18 @@ public class RecorderReplayerMenu : MonoBehaviour
 
     //private event EventHandler<bool> OnPlayPauseReplay;
 
+    public string GetRecording(int index) 
+    { 
+        return recordings != null ? recordings[index] : string.Empty; 
+    }
+    public int NumberOfRecordings() { return recordings.Count; }
+
+
+    //public void SetAutomatedReplay(bool b)
+    //{
+    //    automatedReplay = b;
+    //}
+
     void Start()
     {
         panelSwitcher = GetComponentInParent<PanelSwitcher>();
@@ -102,11 +117,10 @@ public class RecorderReplayerMenu : MonoBehaviour
         GetReplayFilesFromDir();
         AddReplayFiles();
     }
-
     private void Replayer_OnLoadingReplay(object sender, RecorderReplayerTypes.RecordingInfo e)
     {
         slider.maxValue = recRep.replayer.recInfo.frames - 1;
-        Debug.Log("Set slider max value: " + slider.maxValue);
+        //Debug.Log("Set slider max value: " + slider.maxValue);
     }
 
     public void OnPeerAdded(IPeer peer)
@@ -236,7 +250,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         }
     }
 
-    private void SelectReplayFile(string file)
+    public void SelectReplayFile(string file)
     {
         recRep.replayFile = file;
         currentReplayFileName.text = file;
@@ -342,7 +356,8 @@ public class RecorderReplayerMenu : MonoBehaviour
     }
 
     public void PlayPauseReplay()
-    {        
+    {
+        PlayPauseReplayEvent.Invoke(this, !recRep.play);
         if (recRep.play) // if playing pause it
         {
             Debug.Log("Pause");
@@ -382,19 +397,15 @@ public class RecorderReplayerMenu : MonoBehaviour
            
         }
     }
-
     void Update()
     {
-        if(recRep.replaying)
+        Replay();
+    }
+
+    public void Replay()
+    {
+        if (recRep.replaying)
         {
-            //if(!infoSet && recRep.replayer.recInfo != null)
-            //{
-            //    infoSet = true;
-            //    slider.maxValue = recRep.replayer.recInfo.frames-1;
-            //    Debug.Log("Set slider max value: " + slider.maxValue);
-            //}
-
-
             if (!recRep.play) // only display frame number during pause otherwise it looks confusing because text changes so fast
             {
                 sliderText.text = slider.value.ToString();
@@ -403,7 +414,7 @@ public class RecorderReplayerMenu : MonoBehaviour
             else
             {
                 //Debug.Log(recRep.currentReplayFrame);
-                sliderText.text = ""; 
+                sliderText.text = "";
                 slider.value = recRep.currentReplayFrame;
                 //Debug.Log(slider.value);
             }
@@ -411,7 +422,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         else
         {
             infoSet = false;
-            if(resetReplayImage)
+            if (resetReplayImage)
             {
                 replayImage.color = white;
                 replayText.color = white;

@@ -108,7 +108,7 @@ namespace Ubiq.Spawning
 
         private GameObject InstantiateReplay(int i, NetworkId networkId, bool local, bool visible, string uuid, bool outline, TransformMessage transform)
         {
-            Debug.Log("Instantiate Replay");
+            //Debug.Log("Instantiate Replay");
             GameObject go = Instantiate(i, networkId, local);
             go.transform.position = transform.position;
             go.transform.rotation = transform.rotation;
@@ -131,7 +131,7 @@ namespace Ubiq.Spawning
                     //go.GetComponent<Outliner>().SetOutline(true); // every object/avatar that can be replayed should have this to distinguish them from the real deal
                 }
             }
-            Debug.Log("visible is " + visible);
+            //Debug.Log("visible is " + visible);
             if (visible)
             {
                 if (go.TryGetComponent(out ObjectHider objectHider))
@@ -227,7 +227,7 @@ namespace Ubiq.Spawning
 
         public void UnspawnPersistent(NetworkId networkId)
         {
-            Debug.Log("Unspawn Persistent id: " + networkId.ToString());
+            //Debug.Log("Unspawn Persistent id: " + networkId.ToString());
            
             var key = $"SpawnedObject-{ networkId }";
             // if OnLeftRoom is called too the objects are destroyed there and not here
@@ -237,14 +237,20 @@ namespace Ubiq.Spawning
                 {
                     Destroy(spawned[networkId]); // object is destroyed after the current update loop
                     // send a hide message so the recording knows when the object should be invisible
-                    spawned[networkId].gameObject.GetComponent<ObjectHider>().SetNetworkedObjectLayer(8);
-                    //spawned.Remove(networkId); Ben did that
+                    //ObjectHider objectHider;
+                    if (spawned[networkId].TryGetComponent<ObjectHider>(out ObjectHider objectHider))
+                    {
+                        objectHider.SetNetworkedObjectLayer(8);
+                    }
+                    //spawned[networkId].gameObject.GetComponent<ObjectHider>().SetNetworkedObjectLayer(8);
+                    // Ben commented it (initially) / but I need up to date list to let the MotionFileCreator get the correct number of avatars (ok if only local)
+                    spawned.Remove(networkId); 
 
                     if (roomClient.Me["creator"] == "1")
                     {
                         // if this is not called, remote objects are just rendered invisible until creator leaves and OnPeerRemoved is called
                         // after creator has left the next creator has already been assigned
-                        Debug.Log("Send from UnspawnPersistent");
+                        //Debug.Log("Send from UnspawnPersistent");
                         context.SendJson(new Message() { networkId = networkId, remove = true });
                     }
                 }
@@ -268,7 +274,7 @@ namespace Ubiq.Spawning
             }
             else
             {
-                Debug.Log("Update properties for " + networkId.ToString());
+                //Debug.Log("Update properties for " + networkId.ToString());
                 msg = JsonUtility.FromJson<Message>(prop);
             }
             switch(type)
@@ -285,7 +291,7 @@ namespace Ubiq.Spawning
                             uuid = msg.uuid,
                             outline = msg.outline
                         });
-                        Debug.Log("UpdateVisibility of " + networkId + " to " + arg);
+                        //Debug.Log("UpdateVisibility of " + networkId + " to " + arg);
                         break;
                     }
                 case "UpdateTexture":
@@ -300,7 +306,7 @@ namespace Ubiq.Spawning
                             uuid = (string)arg,
                             outline = msg.outline
                         });
-                        Debug.Log("UpdateTexture of " + networkId + " to " + arg);
+                        //Debug.Log("UpdateTexture of " + networkId + " to " + arg);
                         break;
                     }
             }
