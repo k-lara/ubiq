@@ -57,6 +57,7 @@ public class MotionFileCreator : MonoBehaviour
 
     public void SetToggle(Toggle toggle)
     {
+        Debug.Log(toggle.name);
         switch (toggle.name)
         {
             case "ReplayOnlyToggle":

@@ -453,7 +453,7 @@ public class Replayer
             {
                 Debug.Log("old: " + i.Key + " new: " + i.Value);
             }
-            throw;
+            //throw;
         }    
         return rcsgm;
     }
@@ -475,16 +475,24 @@ public class Replayer
             byte[] msg = new byte[lengthMsg];
             Buffer.BlockCopy(msgPack, i, msg, 0, lengthMsg);
 
-            ReferenceCountedSceneGraphMessage rcsgm = CreateRCSGM(msg);
-            //Debug.Log(rcsgm.objectid.ToString());
-            ReplayedObjectProperties props = replayedObjects[rcsgm.objectid]; // avatars and objects
-            //Debug.Log(rcsgm.componentid);
-            INetworkComponent component = props.components[rcsgm.componentid];
+            try
+            {
+                ReferenceCountedSceneGraphMessage rcsgm = CreateRCSGM(msg);
+                //Debug.Log(rcsgm.objectid.ToString());
+                ReplayedObjectProperties props = replayedObjects[rcsgm.objectid]; // avatars and objects
+                //Debug.Log(rcsgm.componentid);
+                INetworkComponent component = props.components[rcsgm.componentid];
 
-            // send and replay remotely
-            recRep.scene.Send(rcsgm);
-            // replay locally
-            component.ProcessMessage(rcsgm);
+                // send and replay remotely
+                recRep.scene.Send(rcsgm);
+                // replay locally
+                component.ProcessMessage(rcsgm);
+            }
+            catch (Exception e)
+            {
+                Debug.Log("KeyNotFoundException with objectid");
+            }
+            
 
             i += lengthMsg;
         }

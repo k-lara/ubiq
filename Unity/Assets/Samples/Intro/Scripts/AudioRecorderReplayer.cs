@@ -17,6 +17,7 @@ using Ubiq.Samples;
 //[RequireComponent(typeof(RecorderReplayer))]
 public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComponent
 {
+    public const int LATENCY = 200; // ms
     public const int SAMPLINGFREQ = 16000;
     public const int NUMSAMPLES = SAMPLINGFREQ * 2;
     public static bool MASTERONLY = false;
@@ -100,6 +101,24 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     // audio clip creation
     private float gain = 1.0f;
 
+    private int pointerLatency = (SAMPLINGFREQ / 1000) * LATENCY;
+    public UnityEngine.UI.RawImage waveFormTextureTest;
+    public UnityEngine.UI.RawImage texturePointerTest;
+    private List<Texture2D> waveformTextures;
+    private List<Texture2D> pointersToSamples;
+    private int width = 500;
+    private int height = 100;
+    private Color col = Color.black;
+    private Color p1 = Color.black;
+    private Color p2 = Color.blue;
+    private Color p3 = Color.green;
+    private Color[] playerCols;
+    private Color transparent = Color.clear;
+    private Color pointerCol = Color.red;
+    private Color[] pointerCols;
+    private Color[] pointerColsClear;
+    private int prevPointerPos = 0;
+    private int thickness = 2; // number of pixels in width for thickness of line
 
     // replay test file
     //private string testAudioFileReplay = "testAudioReplay"; // test file saving float values to check if data is correct
@@ -116,6 +135,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     // Start is called before the first frame update
     void Start()
     {
+        playerCols = new Color[] { p1, p2, p3, p1, p2, p3 };
         //scene = GetComponent<NetworkScene>();
         recRep = GetComponent<RecorderReplayer>();
         roomClient = scene.GetComponent<RoomClient>();
@@ -153,6 +173,15 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         audioMessages.Add(new byte[2]); // clip number (short)
 
         SetClipNumber(CLIPNUMBER++);
+
+        pointerCols = new Color[height * thickness];
+        pointerColsClear = new Color[height * thickness];
+        for (int i = 0; i < pointerCols.Length; i++)
+        {
+            pointerCols[i] = pointerCol;
+            pointerColsClear[i] = transparent;
+        }
+
     }
     public Dictionary<short, int> GetLatencies()
     {
@@ -177,9 +206,14 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     public void SetLatencies()
     {
         var i = 0;
+        var r = replayedAudioSources.Count-1; // last index (because the last audio source is the one that got recorded first and has least latency)
+        var currentLatency = LATENCY;
         foreach (var item in replayedAudioSources)
         {
-            var latency = ComputeLatencySamples(latenciesMs[i]);
+            //var latency = ComputeLatencySamples(latenciesMs[i]);
+            var latency = ComputeLatencySamples(currentLatency * r);
+            latenciesMs[i] = currentLatency * r;
+
             if (item.Value.timeSamples > 0) // if clip was already playing but latency is adapted afterwards
             {
                 var newTimeSamples = item.Value.timeSamples - clipNumberToLatency[item.Key] + latency;
@@ -189,6 +223,11 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 
             // speech indicators need to know about latency too otherwise there is an error
             speechIndicators[item.Key].SetLatencySamples(latency);
+            if (r > 0)
+            {
+                r--;
+            }
+
             i++;
         }
         SendAudioMessage(new AudioMessage() { messageId = 2, timeSamples = clipNumberToLatency.Values.ToArray(), muteClips = mute });
@@ -400,7 +439,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     {
         audioSource.Play();
         audioSource.timeSamples = samples;
-        Debug.Log("Play and consider latency" + samples);
+        Debug.Log("Play and consider latency " + samples);
     }
 
     private void PlayPause(bool play)
@@ -645,6 +684,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             replayedAudioSources[s].clip.SetData(floatSamples, clipPos);   
             audioClipPositions[s] += floatSamples.Length; // advance position
 
+            // add waveform to a canvas and show it to the user
+
             //iter++;
             //if (iter == iterations)
             //{
@@ -655,9 +696,81 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         {
             Debug.Log("Finished reading audio data!");
             startReadingFromFile = false;
+
+            SetLatencies();
+
+            waveformTextures = new List<Texture2D>();
+            pointersToSamples = new List<Texture2D>();
+
+            Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            Texture2D texTransparent = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            SetTextureBackground(tex, texTransparent, Color.white, width, height);
+
+            int i = 0;
+            foreach (var source in replayedAudioSources.Values)
+            {
+                DrawWaveform(tex, texTransparent, source.clip, width, height, playerCols[i]);
+                if (i < playerCols.Length)
+                {
+                    i++;
+                }
+            }
+
+            /////////////////////CHange this later to loop /////////////////////////////////
+            if (waveformTextures.Count > 0)
+            {
+                waveFormTextureTest.texture = waveformTextures[0];
+                texturePointerTest.texture = pointersToSamples[0];
+            }
         }
         return audioMessage;
         //testStreamWriterReplay.Dispose();
+    }
+
+    public void SetTextureBackground(Texture2D tex, Texture2D texTransparent, Color col, int width, int height)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                tex.SetPixel(x, y, col);
+                texTransparent.SetPixel(x, y, Color.clear);
+            }
+        }
+    }
+
+    public void DrawWaveform(Texture2D tex, Texture2D texTransparent, AudioClip clip, int width, int height, Color col)
+    {
+        //Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        //Texture2D texTransparent = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+        float[] samples = new float[clip.samples * clip.channels];
+        float[] waveform = new float[width];
+
+        clip.GetData(samples, 0);
+
+        float packSize = ((float)samples.Length / (float)width);
+        int s = 0;
+
+        for (float i = 0; Mathf.RoundToInt(i) < samples.Length && s < waveform.Length; i+=packSize)
+        {
+            waveform[s] = Mathf.Abs(samples[Mathf.RoundToInt(i)]);
+            s++;
+        }
+
+        for (int x = 0; x < waveform.Length; x++)
+        {
+            for (int y = 0; y <= waveform[x] * ((float)height * 5); y++)
+            {
+                tex.SetPixel(x, (height / 2) + y, col);
+                tex.SetPixel(x, (height / 2) - y, col);
+            }
+        }
+        tex.Apply();
+        texTransparent.Apply();
+
+        waveformTextures.Add(tex);
+        pointersToSamples.Add(texTransparent);
     }
 
     private const int MAXPCKGS = 48000;
@@ -712,6 +825,36 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                     SendAudioMessage(new AudioMessage() { messageId = 6, timeSamples = currentTimeSamplesPerClip});
                 }
             }
+            
+            // when replay is playing draw a line on the audio texture for the current position
+            if (recRep.replaying && recRep.play)
+            {
+                var i = 0;
+                foreach (var source in replayedAudioSources.Values)
+                {
+                    DrawPointerOnWaveform(pointersToSamples[i], source, width, height, pointerLatency);
+                    i++;
+                }
+            }
+        }
+    }
+
+    public void DrawPointerOnWaveform(Texture2D tex, AudioSource source, int width, int height, int latency)
+    {
+        float packSize = ((float)source.clip.samples / (float)width);
+
+        int pointerPos = Mathf.RoundToInt(((float)source.timeSamples - (float)latency) / packSize);
+
+        if (pointerPos != prevPointerPos && pointerPos > 0)
+        {
+            Debug.Log(source.clip.samples);
+            Debug.Log(prevPointerPos + " " + height + " " + pointerColsClear.Length);
+            Debug.Log(pointerPos + " " + height + " " + pointerCols.Length);
+
+            tex.SetPixels(prevPointerPos, 0, thickness, height, pointerColsClear);
+            tex.SetPixels(pointerPos, 0, thickness, height, pointerCols);
+            tex.Apply();
+            prevPointerPos = pointerPos;
         }
     }
 
@@ -1071,51 +1214,51 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 }
 
 # if UNITY_EDITOR
-//[CustomEditor(typeof(AudioRecorderReplayer))]
-//public class RecorderReplayerEditor : Editor
-//{
-//    AudioRecorderReplayer t;
-//    SerializedProperty Latencies;
-//    SerializedProperty Mute;
-//    bool masterOnly;
-//    //SerializedProperty MasterOnly;
+[CustomEditor(typeof(AudioRecorderReplayer))]
+public class RecorderReplayerEditor : Editor
+{
+    AudioRecorderReplayer t;
+    SerializedProperty Latencies;
+    SerializedProperty Mute;
+    bool masterOnly;
+    //SerializedProperty MasterOnly;
 
-//    void OnEnable()
-//    {
-//        t = (AudioRecorderReplayer)target;
-//        // Fetch the objects from script to display in the inspector
-//        Latencies = serializedObject.FindProperty("latenciesMs");
-//        Mute = serializedObject.FindProperty("mute");
-//        //MasterOnly = serializedObject.FindProperty("MASTERONLY");
-//    }
+    void OnEnable()
+    {
+        t = (AudioRecorderReplayer)target;
+        // Fetch the objects from script to display in the inspector
+        Latencies = serializedObject.FindProperty("latenciesMs");
+        Mute = serializedObject.FindProperty("mute");
+        //MasterOnly = serializedObject.FindProperty("MASTERONLY");
+    }
 
-//    public override void OnInspectorGUI()
-//    {
-//        // disable GUI when no replay is loaded and while replay is playing (to avoid weird behaviour)
-//        EditorGUI.BeginDisabledGroup(!t.recRep.replaying || (t.recRep.replaying && t.recRep.play));
+    public override void OnInspectorGUI()
+    {
+        // disable GUI when no replay is loaded and while replay is playing (to avoid weird behaviour)
+        EditorGUI.BeginDisabledGroup(!t.recRep.replaying || (t.recRep.replaying && t.recRep.play));
 
-//        //The variables and GameObject from the GameObject script are displayed in the Inspector and have the appropriate label
-//        EditorGUILayout.LabelField(new GUIContent("Audio Clips are ordered from newest (most latency) to oldest."));
-//        EditorGUILayout.PropertyField(Latencies, new GUIContent("Latency: "));
-//        EditorGUILayout.Space();
-//        masterOnly = EditorGUILayout.Toggle("Master Only ", masterOnly);
-//        EditorGUILayout.PropertyField(Mute, new GUIContent("Mute: "));
+        //The variables and GameObject from the GameObject script are displayed in the Inspector and have the appropriate label
+        EditorGUILayout.LabelField(new GUIContent("Audio Clips are ordered from newest (most latency) to oldest."));
+        EditorGUILayout.PropertyField(Latencies, new GUIContent("Latency: "));
+        EditorGUILayout.Space();
+        masterOnly = EditorGUILayout.Toggle("Master Only ", masterOnly);
+        EditorGUILayout.PropertyField(Mute, new GUIContent("Mute: "));
 
 
-//        // Apply changes to the serializedProperty - always do this in the end of OnInspectorGUI.
-//        serializedObject.ApplyModifiedProperties();
+        // Apply changes to the serializedProperty - always do this in the end of OnInspectorGUI.
+        serializedObject.ApplyModifiedProperties();
 
-//        if (GUILayout.Button("Apply changes!"))
-//        {
-//            if (masterOnly)
-//            {
-//                t.MuteAllButMasterClip(masterOnly);
-//            }
-//            t.SetLatencies();
-//        }
-//        EditorGUI.EndDisabledGroup();
+        if (GUILayout.Button("Apply changes!"))
+        {
+            if (masterOnly)
+            {
+                t.MuteAllButMasterClip(masterOnly);
+            }
+            t.SetLatencies();
+        }
+        EditorGUI.EndDisabledGroup();
 
-//    }
-//}
+    }
+}
 # endif
 

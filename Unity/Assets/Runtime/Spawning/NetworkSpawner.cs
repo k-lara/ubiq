@@ -116,11 +116,13 @@ namespace Ubiq.Spawning
             // not everything that's replayed is an avatar or has a texture
             if (go.TryGetComponent(out TexturedAvatar texturedAvatar))
             {
-                texturedAvatar.SetTexture(uuid);
+                //texturedAvatar.SetTexture(uuid); // uncomment if texture should stay the same as in recording!
+                var Textures = texturedAvatar.Textures;
+                texturedAvatar.SetTexture(Textures.Get(UnityEngine.Random.Range(0, Textures.Count)));
             }
             if (go.TryGetComponent(out ITexturedObject texturedObject))
             {
-                texturedObject.SetTexture(uuid);
+                texturedObject.SetTexture(uuid); // uncomment if texture should stay the same as in recording!
             }
 
             if (outline)

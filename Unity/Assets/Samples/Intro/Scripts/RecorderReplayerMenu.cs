@@ -218,7 +218,7 @@ public class RecorderReplayerMenu : MonoBehaviour
     }
     public void AddReplayFiles()
     {
-        if(!loaded)
+        if (!loaded)
         {
             Debug.Log("Add all files");
             AddFiles(recordings, content);
@@ -236,13 +236,16 @@ public class RecorderReplayerMenu : MonoBehaviour
     }
     private void AddFiles(List<string> recordings, GameObject content)
     {
+        //for (int i = recordings.Count - 1; i >= 0; i--) // show newest recording first 
         foreach (var file in recordings)
         {
+            //var file = recordings[i];
             GameObject go = Instantiate(buttonPrefab, content.transform);
             var button = go.GetComponent<Button>();
             button.image.color = Color.clear;
             button.onClick.AddListener(delegate { SelectReplayFile(file); } );
             //go.GetComponent<Button>().onClick.AddListener(delegate { CloseFileWindow(content); });
+            button.transform.SetAsFirstSibling();
             replayFileButtons.Add(button);
 
             Text t = go.GetComponentInChildren<Text>();
@@ -270,12 +273,19 @@ public class RecorderReplayerMenu : MonoBehaviour
     {        
         if (recRep.recording) // if recording stop it
         {
+            Debug.Log("Toggle Record (STOP)");
+
             EndRecordingAndCleanup();
+            if (recRep.replaying)
+            {
+                EndReplayAndCleanup(); // just in case there could have been a replay going on too
+                EnableReplayFileSelection(true);
+            }
             AddReplayFiles();
         }
         else // start recording
         {
-            Debug.Log("Toggle Record");
+            Debug.Log("Toggle Record (START)");
             recordImage.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
             recordText.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
             recRep.recording = true;
@@ -291,6 +301,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         Debug.Log(rec);
         recordings.Add(rec);
         newRecordings.Add(rec);
+        SelectReplayFile(rec);
         needsUpdate = true;
 
         recordImage.color = white;
