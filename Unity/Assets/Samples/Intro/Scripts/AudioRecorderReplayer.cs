@@ -792,13 +792,13 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 {
                     if (deltaReadingTime >= 0.025f)
                     {
-                        while (pckgSamples > 0)
+                        if (pckgSamples > 0)
                         {
                             AudioMessage amsg = ReadAudioDataFromFile(1);
-                            if (amsg.samples == null)
-                            {
-                                break;
-                            }
+                            //if (amsg.samples == null)
+                            //{
+                            //    break;
+                            //}
                             SendAudioMessage(amsg);
                             pckgSamples -= amsg.samples.Length;
                        
@@ -824,18 +824,16 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                     //context.SendJson(new Message() { id = 6, messageType = sm });
                     SendAudioMessage(new AudioMessage() { messageId = 6, timeSamples = currentTimeSamplesPerClip});
                 }
-            }
-            
-            // when replay is playing draw a line on the audio texture for the current position
-            if (recRep.replaying && recRep.play)
-            {
-                var i = 0;
-                foreach (var source in replayedAudioSources.Values)
+                // when replay is playing draw a line on the audio texture for the current position
+                if (recRep.replaying && recRep.play && audioDataAvailable && !startReadingFromFile)
                 {
-                    DrawPointerOnWaveform(pointersToSamples[i], source, width, height, pointerLatency);
-                    i++;
+                    foreach (var source in replayedAudioSources.Values)
+                    {
+                        DrawPointerOnWaveform(pointersToSamples[0], source, width, height, pointerLatency);
+                    }
                 }
             }
+            
         }
     }
 
@@ -847,9 +845,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 
         if (pointerPos != prevPointerPos && pointerPos > 0)
         {
-            Debug.Log(source.clip.samples);
-            Debug.Log(prevPointerPos + " " + height + " " + pointerColsClear.Length);
-            Debug.Log(pointerPos + " " + height + " " + pointerCols.Length);
+            //Debug.Log(source.clip.samples);
+            //Debug.Log(prevPointerPos + " " + height + " " + pointerColsClear.Length);
+            //Debug.Log(pointerPos + " " + height + " " + pointerCols.Length);
 
             tex.SetPixels(prevPointerPos, 0, thickness, height, pointerColsClear);
             tex.SetPixels(pointerPos, 0, thickness, height, pointerCols);
@@ -1214,51 +1212,51 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 }
 
 # if UNITY_EDITOR
-[CustomEditor(typeof(AudioRecorderReplayer))]
-public class RecorderReplayerEditor : Editor
-{
-    AudioRecorderReplayer t;
-    SerializedProperty Latencies;
-    SerializedProperty Mute;
-    bool masterOnly;
-    //SerializedProperty MasterOnly;
+//[CustomEditor(typeof(AudioRecorderReplayer))]
+//public class RecorderReplayerEditor : Editor
+//{
+//    AudioRecorderReplayer t;
+//    SerializedProperty Latencies;
+//    SerializedProperty Mute;
+//    bool masterOnly;
+//    //SerializedProperty MasterOnly;
 
-    void OnEnable()
-    {
-        t = (AudioRecorderReplayer)target;
-        // Fetch the objects from script to display in the inspector
-        Latencies = serializedObject.FindProperty("latenciesMs");
-        Mute = serializedObject.FindProperty("mute");
-        //MasterOnly = serializedObject.FindProperty("MASTERONLY");
-    }
+//    void OnEnable()
+//    {
+//        t = (AudioRecorderReplayer)target;
+//        // Fetch the objects from script to display in the inspector
+//        Latencies = serializedObject.FindProperty("latenciesMs");
+//        Mute = serializedObject.FindProperty("mute");
+//        //MasterOnly = serializedObject.FindProperty("MASTERONLY");
+//    }
 
-    public override void OnInspectorGUI()
-    {
-        // disable GUI when no replay is loaded and while replay is playing (to avoid weird behaviour)
-        EditorGUI.BeginDisabledGroup(!t.recRep.replaying || (t.recRep.replaying && t.recRep.play));
+//    public override void OnInspectorGUI()
+//    {
+//        // disable GUI when no replay is loaded and while replay is playing (to avoid weird behaviour)
+//        EditorGUI.BeginDisabledGroup(!t.recRep.replaying || (t.recRep.replaying && t.recRep.play));
 
-        //The variables and GameObject from the GameObject script are displayed in the Inspector and have the appropriate label
-        EditorGUILayout.LabelField(new GUIContent("Audio Clips are ordered from newest (most latency) to oldest."));
-        EditorGUILayout.PropertyField(Latencies, new GUIContent("Latency: "));
-        EditorGUILayout.Space();
-        masterOnly = EditorGUILayout.Toggle("Master Only ", masterOnly);
-        EditorGUILayout.PropertyField(Mute, new GUIContent("Mute: "));
+//        //The variables and GameObject from the GameObject script are displayed in the Inspector and have the appropriate label
+//        EditorGUILayout.LabelField(new GUIContent("Audio Clips are ordered from newest (most latency) to oldest."));
+//        EditorGUILayout.PropertyField(Latencies, new GUIContent("Latency: "));
+//        EditorGUILayout.Space();
+//        masterOnly = EditorGUILayout.Toggle("Master Only ", masterOnly);
+//        EditorGUILayout.PropertyField(Mute, new GUIContent("Mute: "));
 
 
-        // Apply changes to the serializedProperty - always do this in the end of OnInspectorGUI.
-        serializedObject.ApplyModifiedProperties();
+//        // Apply changes to the serializedProperty - always do this in the end of OnInspectorGUI.
+//        serializedObject.ApplyModifiedProperties();
 
-        if (GUILayout.Button("Apply changes!"))
-        {
-            if (masterOnly)
-            {
-                t.MuteAllButMasterClip(masterOnly);
-            }
-            t.SetLatencies();
-        }
-        EditorGUI.EndDisabledGroup();
+//        if (GUILayout.Button("Apply changes!"))
+//        {
+//            if (masterOnly)
+//            {
+//                t.MuteAllButMasterClip(masterOnly);
+//            }
+//            t.SetLatencies();
+//        }
+//        EditorGUI.EndDisabledGroup();
 
-    }
-}
+//    }
+//}
 # endif
 
