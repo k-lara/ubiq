@@ -82,6 +82,9 @@ public class Recorder
             // create message pack for first frame (frameNr == 0)
             messages = new MessagePack();
 
+            // recording time info
+            recRep.timeInfo.text = "Recording\n00:00";
+
             initFile = true;
         }
 
@@ -96,6 +99,10 @@ public class Recorder
                 long idx = idxFrameStart[idxFrameStart.Count - 1] + bMessages.Length;
                 idxFrameStart.Add(idx);
                 frameTimes.Add(Time.unscaledTime - recordingStartTime);
+                var currentTime = Time.unscaledTime - recordingStartTime;
+                var mins = Mathf.FloorToInt(currentTime / 60);
+                var secs = Mathf.FloorToInt(currentTime % 60);
+                recRep.timeInfo.text = "Recording \n" + string.Format("{0:00}:{1:00}", mins, secs);
                 //Debug.Log("FrameNr, pckgsize, idxFrameStart " + frameNr + " " + pckgSizePerFrame.Count + " " + idxFrameStart.Count);
             }
             messages = new MessagePack();
@@ -169,6 +176,7 @@ public class Recorder
 
             initFile = false;
             frameNr = previousFrame = 0;
+            recRep.timeInfo.text = "";
             Debug.Log("Recording info saved");
 
         }
@@ -204,6 +212,9 @@ public class Replayer
     private FileStream streamFromFile;
     private bool objectsCreated = false;
     private bool opened = false;
+
+    // display replay time
+    int maxMins, maxSecs;
  
     public Replayer(RecorderReplayer recRep)
     {
@@ -251,6 +262,9 @@ public class Replayer
                         ReplayFromFile(); // replay current frame
                         UpdateFrame(); // update to next frame
                     }
+                    var mins = Mathf.FloorToInt(prev / 60);
+                    var secs = Mathf.FloorToInt(prev % 60);
+                    recRep.replayTimeInfo.text = "Replaying \n" + string.Format("{0:00}:{1:00}/{2:00}:{3:00}", mins, secs, maxMins, maxSecs);
                 }
                 else
                 {
@@ -324,18 +338,40 @@ public class Replayer
 
     private bool CreateRecordedObjects()
     {
+        GameObject[] gos = GameObject.FindGameObjectsWithTag("RIO");
+
+
         foreach (var item in prefabs)
         {
             var objectid = item.Key;
             var prefabName = item.Value;
             var uid = textures[objectid]; // value is "n" if there is no texture
             GameObject prefab = spawner.catalogue.GetPrefab(prefabName);
+            GameObject go = null;
+
             if (prefab == null)
             {
-                //Debug.Log("Continue: " + objectid.ToString() + " " + prefabName);
-                continue;
+                Debug.Log("Continue: " + objectid.ToString() + " " + prefabName);
+                //continue;
+                // try finding object in scene in case this is a RIObject
+                foreach (var g in gos)
+                {
+                    if (g.name == prefabName)
+                    {
+                        Debug.Log("Found game object: " + prefabName);
+                        go = g;
+                        break;
+                    }
+                }
+                if (go == null)
+                {
+                    continue; // if the game object in the recording does not exist in the scene
+                }
             }
-            GameObject go = spawner.SpawnPersistentReplay(prefab, false, uid, true, new TransformMessage(recRep.thisTransform));
+            else
+            { 
+                go = spawner.SpawnPersistentReplay(prefab, false, uid, true, new TransformMessage(recRep.thisTransform));
+            }
             
             ReplayedObjectProperties props = new ReplayedObjectProperties();
             if (go.TryGetComponent(out ObjectHider objectHider))
@@ -421,6 +457,11 @@ public class Replayer
             prefabs = recInfo.objectids.Zip(recInfo.prefabs, (k, v) => new { k, v }).ToDictionary(x => x.k, x => x.v);
             textures = recInfo.objectids.Zip(recInfo.textures, (k, v) => new { k, v }).ToDictionary(x => x.k, x => x.v);
         }
+
+        // set timer info
+        var maxTime = recInfo.frameTimes[recInfo.frameTimes.Count-1];
+        maxMins = Mathf.FloorToInt(maxTime / 60);
+        maxSecs = Mathf.FloorToInt(maxTime % 60);
 
         return recInfo;
     }
@@ -511,6 +552,7 @@ public class Replayer
 
     public void Cleanup(bool unspawn)
     {
+        recRep.replayTimeInfo.text = "";
         OnReplayStopped.Invoke(this, EventArgs.Empty);
 
         //Debug.Log("Cleanup " + Time.unscaledTime);
@@ -561,6 +603,9 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     [HideInInspector] public NetworkSpawner spawner;
     private bool Recording = false; // this variable indicates if a recording is taking place, this doesn't need to be the local recording!
     private NetworkContext context;
+
+    public UnityEngine.UI.Text timeInfo; // for recordings
+    public UnityEngine.UI.Text replayTimeInfo; // for replays
 
     public string replayFile;
     [HideInInspector] public string recordFile = null;
@@ -633,6 +678,9 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
         recorder = new Recorder(this);
         replayer = new Replayer(this);
         play = false; // I am not entirely sure why it is true otherwise
+
+        timeInfo.text = "";
+        replayTimeInfo.text = "";
     }
 
     public struct RoomMessage

@@ -22,7 +22,7 @@ public class HandAnimation : MonoBehaviour, INetworkComponent
     private string animatorGripParam = "Grip";
 
     private NetworkContext context;
-    private Avatar avatar;
+    public Avatar avatar;
 
     public (float, float) GetGripTargets()
     {

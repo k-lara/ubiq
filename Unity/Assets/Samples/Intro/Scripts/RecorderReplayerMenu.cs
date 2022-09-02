@@ -59,7 +59,19 @@ public class RecorderReplayerMenu : MonoBehaviour
 
     public event EventHandler OnPointerUp;
 
+    private bool prevPressed = false;
+
     //private event EventHandler<bool> OnPlayPauseReplay;
+
+    // only for VR button
+    public void PrimaryButtonPress(bool pressed)
+    {
+        if (!prevPressed && pressed) // only check for button presses (not releases)
+        {
+            ToggleRecord();
+        }
+        prevPressed = pressed;
+    }
 
     public string GetRecording(int index) 
     { 
