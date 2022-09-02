@@ -6,6 +6,8 @@ TagManager:
   tags:
   - Teleport
   - Ground
+  - RIO
+  - TriggerRIO
   layers:
   - Default
   - TransparentFX
