@@ -488,12 +488,12 @@ public class Replayer
         }
         catch (Exception e)
         {
-            if (e.Source != null)
-                Debug.Log("Network id: " + id + ", Component " + rcsgm.componentid);
-            foreach(var i in oldNewIds)
-            {
-                Debug.Log("old: " + i.Key + " new: " + i.Value);
-            }
+            //if (e.Source != null)
+            //    Debug.Log("Network id: " + id + ", Component " + rcsgm.componentid);
+            //foreach(var i in oldNewIds)
+            //{
+            //    Debug.Log("old: " + i.Key + " new: " + i.Value);
+            //}
             //throw;
         }    
         return rcsgm;
@@ -703,22 +703,25 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     }
     public void OnJoinedRoom(IRoom room)
     {
-        Debug.Log("OnJoinedRoom RecorderReplayer");
-        if (roomClient.Peers.Count() == 0)
-        {
-            Debug.Log("No peers in room, make me creator");
-            roomClient.Me["creator"] = "1";
-        }
-        else if (roomClient.Peers.Count() == 1) // this one has to be the creator so if they leave let me become creator
-        {
-            Debug.Log("Creator in the room, let me become successor");
-            roomClient.Me["creator"] = "2";
-        }
-        else
-        {
-            Debug.Log(roomClient.Peers.Count() + "other peer(s) in the room, someone else is creator");
-            roomClient.Me["creator"] = "0";
-        }
+        Debug.Log("Disable creator for now and let me always be creator");
+        roomClient.Me["creator"] = "1";
+        // uncomment when needed again!!!!
+        //Debug.Log("OnJoinedRoom RecorderReplayer");
+        //if (roomClient.Peers.Count() == 0)
+        //{
+        //    Debug.Log("No peers in room, make me creator");
+        //    roomClient.Me["creator"] = "1";
+        //}
+        //else if (roomClient.Peers.Count() == 1) // this one has to be the creator so if they leave let me become creator
+        //{
+        //    Debug.Log("Creator in the room, let me become successor");
+        //    roomClient.Me["creator"] = "2";
+        //}
+        //else
+        //{
+        //    Debug.Log(roomClient.Peers.Count() + "other peer(s) in the room, someone else is creator");
+        //    roomClient.Me["creator"] = "0";
+        //}
     }
 
     // if previous authority gets discoonected make sure that recording is stopped when authority is given to the next peer

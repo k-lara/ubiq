@@ -161,32 +161,35 @@ public class RecorderReplayerMenu : MonoBehaviour
 
     private void UpdateMenu(IPeer peer) // this method does not make a lot of sense here, as the RecorderReplayer Panel is inactive in the beginning
     {
-        if (peer["creator"] == "1")
-        {
-            Debug.Log("Menu: creator");
-            recordReplayButtonMain.interactable = true;
-            //recordBtn.SetActive(true);
-            //replayBtn.SetActive(true);
-            // set color of record/replay button back to gray in case of ongoing recording/replaying
-            if (!recRep.recording)
-            {
-                recordImage.color = white;
-                recordText.color = white;
+        // for current interactable scenarios disable this logic
+        recordReplayButtonMain.interactable = true;
+        
+        //if (peer["creator"] == "1")
+        //{
+        //    Debug.Log("Menu: creator");
+        //    recordReplayButtonMain.interactable = true;
+        //    //recordBtn.SetActive(true);
+        //    //replayBtn.SetActive(true);
+        //    // set color of record/replay button back to gray in case of ongoing recording/replaying
+        //    if (!recRep.recording)
+        //    {
+        //        recordImage.color = white;
+        //        recordText.color = white;
 
-            }
-            if (!recRep.replaying)
-            {
-                replayImage.color = white;
-                replayText.color = white;
-            }
-        }
-        else
-        {
-            Debug.Log("Menu: NOT creator");
-            recordReplayButtonMain.interactable = false;
-            //recordBtn.SetActive(false);
-            //replayBtn.SetActive(false);
-        }
+        //    }
+        //    if (!recRep.replaying)
+        //    {
+        //        replayImage.color = white;
+        //        replayText.color = white;
+        //    }
+        //}
+        //else
+        //{
+        //    Debug.Log("Menu: NOT creator");
+        //    recordReplayButtonMain.interactable = false;
+        //    //recordBtn.SetActive(false);
+        //    //replayBtn.SetActive(false);
+        //}
     }
 
     public void OnPanelSwitch()
