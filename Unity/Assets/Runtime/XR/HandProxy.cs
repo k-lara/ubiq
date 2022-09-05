@@ -19,6 +19,11 @@ namespace Ubiq.XR
         ButtonEvent PrimaryButtonPress { get; }
     }
 
+    public interface ISecondaryButtonProvider
+    { 
+        ButtonEvent SecondaryButtonPress { get; }
+    }
+
     [Serializable]
     public class ButtonEvent : UnityEvent<bool>
     {

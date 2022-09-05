@@ -9,7 +9,7 @@ using static UnityEngine.SpatialTracking.TrackedPoseDriver;
 
 namespace Ubiq.XR
 {
-    public class HandController : Hand, IPrimaryButtonProvider, IMenuButtonProvider
+    public class HandController : Hand, IPrimaryButtonProvider, ISecondaryButtonProvider, IMenuButtonProvider
     {
         private TrackedPoseDriver poseDriver;
         private List<InputDevice> controllers;
@@ -24,6 +24,10 @@ namespace Ubiq.XR
         private ButtonEvent _PrimaryButtonPress;
         public ButtonEvent PrimaryButtonPress { get { return _PrimaryButtonPress; } }
 
+        private ButtonEvent _SecondaryButtonPress;
+        [SerializeField]
+        public ButtonEvent SecondaryButtonPress { get { return _SecondaryButtonPress; } }
+
         [SerializeField]
         private ButtonEvent _MenuButtonPress;
         public ButtonEvent MenuButtonPress { get { return _MenuButtonPress; } }
@@ -37,6 +41,7 @@ namespace Ubiq.XR
         public bool GripState;
         public bool TriggerState;
         public bool PrimaryButtonState;
+        public bool SecondaryButtonState;
 
         private bool initialised;
 
@@ -136,6 +141,11 @@ namespace Ubiq.XR
 
                 foreach (var item in controllers)
                 {
+                    item.TryGetFeatureValue(CommonUsages.secondaryButton, out SecondaryButtonState);
+                }
+
+                foreach (var item in controllers)
+                {
                     item.TryGetFeatureValue(CommonUsages.primary2DAxis, out Joystick);
                 }
             }
@@ -143,6 +153,7 @@ namespace Ubiq.XR
             TriggerPress.Update(TriggerState);
             GripPress.Update(GripState);
             PrimaryButtonPress.Update(PrimaryButtonState);
+            SecondaryButtonPress.Update(SecondaryButtonState);
             JoystickSwipe.Update(Joystick.x);
         }
 
