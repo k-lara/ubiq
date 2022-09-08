@@ -143,6 +143,22 @@ namespace Ubiq.XR
 
                 eventData.pointerPress = null;
             }
+
+            //// joystick scrolling
+            //if (controller.Joystick.y != 0.0f)
+            //{
+            //    Debug.Log("event data pointer enter: " + eventData.pointerEnter.gameObject.name);
+            //    var scrollRect = eventData.pointerEnter.transform.parent.parent.GetComponent<ScrollRect>();
+                
+            //    if (scrollRect != null)
+            //    {
+            //        Debug.Log("scroll");
+            //        float contentHeight = scrollRect.content.sizeDelta.y;
+            //        float contentShift = 2 * controller.Joystick.y * Time.deltaTime;
+            //        scrollRect.verticalNormalizedPosition += contentShift / contentHeight;
+
+            //    }
+            //}
         }
 
         private void LookAway()

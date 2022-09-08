@@ -30,10 +30,10 @@ namespace Ubiq.XR
         {
             if (grasp)
             {
-                Debug.Log("Grasping");
+                //Debug.Log("Grasping");
                 if (contacted != null)
                 {
-                    Debug.Log("Contacted");
+                    //Debug.Log("Contacted");
                     // parent because physical bodies consist of a rigid body, and colliders *below* it in the scene graph
                     grasped = contacted.gameObject.GetComponentsInParent<MonoBehaviour>().Where(mb => mb is IGraspable).FirstOrDefault() as IGraspable;
                     grasped.Grasp(controller);

@@ -24,8 +24,8 @@ namespace Ubiq.XR
         private ButtonEvent _PrimaryButtonPress;
         public ButtonEvent PrimaryButtonPress { get { return _PrimaryButtonPress; } }
 
-        private ButtonEvent _SecondaryButtonPress;
         [SerializeField]
+        private ButtonEvent _SecondaryButtonPress;
         public ButtonEvent SecondaryButtonPress { get { return _SecondaryButtonPress; } }
 
         [SerializeField]
@@ -154,7 +154,8 @@ namespace Ubiq.XR
             GripPress.Update(GripState);
             PrimaryButtonPress.Update(PrimaryButtonState);
             SecondaryButtonPress.Update(SecondaryButtonState);
-            JoystickSwipe.Update(Joystick.x);
+            JoystickSwipe.Update(Joystick.x); // why only x and not y?
+            //JoystickSwipe.Update(Joystick.y);
         }
 
         public bool Left

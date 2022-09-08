@@ -104,7 +104,8 @@ namespace Ubiq.XR
                 {
                     if (item.JoystickSwipe.Trigger)
                     {
-                        transform.RotateAround(headCamera.transform.position, Vector3.up, 45f * Mathf.Sign(item.JoystickSwipe.Value));
+                        // disable swipe for now
+                        //transform.RotateAround(headCamera.transform.position, Vector3.up, 45f * Mathf.Sign(item.JoystickSwipe.Value));
                     }
                 }
                 else if (item.Left)

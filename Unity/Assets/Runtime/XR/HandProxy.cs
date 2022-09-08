@@ -50,6 +50,7 @@ namespace Ubiq.XR
         {
             if (Mathf.Abs(newvalue) > 0.2f)
             {
+
                 if (cooldown)
                 {
                     Trigger = false;
@@ -59,6 +60,7 @@ namespace Ubiq.XR
                     Trigger = true;
                     Value = newvalue;
                     cooldown = true;
+                    //Invoke(newvalue);
                 }
             }
             else
