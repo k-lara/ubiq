@@ -286,25 +286,29 @@ public class RecorderReplayerMenu : MonoBehaviour
 
     public void ToggleRecord()
     {        
-        if (recRep.recording) // if recording stop it
+        if (recRep != null)
         {
-            Debug.Log("Toggle Record (STOP)");
-
-            EndRecordingAndCleanup();
-            if (recRep.replaying)
+            if (recRep.recording) // if recording stop it
             {
-                EndReplayAndCleanup(); // just in case there could have been a replay going on too
-                EnableReplayFileSelection(true);
+                Debug.Log("Toggle Record (STOP)");
+
+                EndRecordingAndCleanup();
+                if (recRep.replaying)
+                {
+                    EndReplayAndCleanup(); // just in case there could have been a replay going on too
+                    EnableReplayFileSelection(true);
+                }
+                AddReplayFiles();
             }
-            AddReplayFiles();
-        }
-        else // start recording
-        {
-            Debug.Log("Toggle Record (START)");
-            recordImage.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
-            recordText.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
-            recRep.recording = true;
-            recRep.SetRecordingStartTime(System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+            else // start recording
+            {
+                Debug.Log("Toggle Record (START)");
+                recordImage.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
+                recordText.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
+                recRep.recording = true;
+                recRep.SetRecordingStartTime(System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+            }
+
         }
         
     }

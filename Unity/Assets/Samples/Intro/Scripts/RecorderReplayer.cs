@@ -531,7 +531,8 @@ public class Replayer
             }
             catch (Exception e)
             {
-                Debug.Log("KeyNotFoundException with objectid");
+                // this happens often with RecorderReplayer object... i don't know why it gets recorded
+                //Debug.Log("KeyNotFoundException with objectid");
             }
             
 
@@ -594,7 +595,7 @@ public class Replayer
     }
 }
 [RequireComponent(typeof(AudioRecorderReplayer))]
-public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkComponent
+public class RecorderReplayer : MonoBehaviour, IMessageRecorder
 {
     public NetworkScene scene;
     public AudioRecorderReplayer audioRecRep;
@@ -692,7 +693,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder, INetworkCompone
     void Start ()
     {
         thisTransform = gameObject.transform;
-        context = scene.RegisterComponent(this);
+        //context = scene.RegisterComponent(this);
         roomClient = scene.GetComponent<RoomClient>();
         //roomClient.OnPeerRemoved.AddListener(OnPeerRemoved);
         roomClient.OnJoinedRoom.AddListener(OnJoinedRoom);

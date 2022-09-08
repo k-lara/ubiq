@@ -770,7 +770,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 
         for (int x = 0; x < waveform.Length; x++)
         {
-            for (int y = 0; y <= waveform[x] * ((float)height * 5); y++)
+            for (int y = 0; y <= waveform[x] * ((float)height * 10); y++)
             {
                 tex.SetPixel(x, (height / 2) + y, col);
                 tex.SetPixel(x, (height / 2) - y, col);

@@ -160,7 +160,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Textures: {fileID: 11400000, guid: 711a32cdfac3cd644a666f4575bf6f22, type: 2}
-  RandomTextureOnSpawn: 1
+  RandomTextureOnSpawn: 0
   SaveTextureSetting: 0
   OnTextureChanged:
     m_PersistentCalls:

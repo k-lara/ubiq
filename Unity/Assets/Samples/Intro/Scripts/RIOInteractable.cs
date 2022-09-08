@@ -19,9 +19,8 @@ public class RIOInteractable : MonoBehaviour
         }
     }
 
-    // Update is called once per frame
-    void Update()
+    public bool Equals(RIOInteractable other)
     {
-        
+        return avatar.Id.Equals(other.avatar.Id);
     }
 }

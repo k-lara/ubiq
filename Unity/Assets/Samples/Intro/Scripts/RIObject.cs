@@ -38,10 +38,6 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
     private Avatar avatar;
     public AvatarManager avatarManager;
 
-    private HandAnimation handAnim; // hand animation of recorded avatar that might be carrying the object
-    private Collider collider;
-    private List<Ubiq.Avatars.Avatar> avatars;
-    private List<Collider> colliders;
     private RecorderReplayer recRep;
 
     public NetworkId Id { get; } = new NetworkId("abc27356-d81e8f59");
@@ -62,14 +58,15 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
 
     public void Grasp(Hand controller)
     {
-        if (!isGrabbed)
+        //if (!isGrabbed)
         {
-            Debug.Log("Let's grab the object");
+            Debug.Log("Live: Let's grab the object");
             handTransform = controller.transform;
             // transforms obj position and rotation from world space into local hand controller space
             localGrabPoint = handTransform.InverseTransformPoint(transform.position);
             localGrabRotation = Quaternion.Inverse(handTransform.rotation) * transform.rotation;
             isGrabbed = true;
+            isGrabbed2 = false;
             rb.isKinematic = true;
         }
     }
@@ -78,9 +75,11 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
     {
         Debug.Log("RecordedGrasp");
         this.handTransform = handTransform;
+        Debug.Log("Position: " + this.handTransform.position.ToString());
         localGrabPoint = handTransform.InverseTransformPoint(transform.position);
         localGrabRotation = Quaternion.Inverse(handTransform.rotation) * transform.rotation;
         isGrabbed = true;
+        isGrabbed2 = false;
         rb.isKinematic = true;
     }
     public void ForceRelease()
@@ -89,7 +88,8 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
         handTransform = null;
         rb.isKinematic = false;
         isGrabbed = false;
-        context.SendJson(new Message(transform, isGrabbed, rb.isKinematic));
+        isGrabbed2 = false;
+        context.SendJson(new Message(transform, isGrabbed2, rb.isKinematic));
 
     }
 
@@ -112,11 +112,9 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
     {
         if (context == null) context = NetworkScene.Register(this);
         scene = NetworkScene.FindNetworkScene(this);
-        avatar = avatarManager.LocalAvatar;
+        //avatar = avatarManager.LocalAvatar;
         recRep = scene.GetComponentInChildren<RecorderReplayer>();
         rb = GetComponent<Rigidbody>();
-        avatars = new List<Ubiq.Avatars.Avatar>();
-        colliders = new List<Collider>();
         rb.drag = 0.5f;
         rb.mass = 0.5f;
         rb.isKinematic = false; 
@@ -176,9 +174,9 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
                     startingPoseSet = true;
                 }
                 //Debug.Log("is grabbed");
-                if (isGrabbed) 
+                if (isGrabbed || isGrabbed2) 
                 {
-                    context.SendJson(new Message(transform, isGrabbed, rb.isKinematic));
+                    context.SendJson(new Message(transform, true, rb.isKinematic));
                     prevPosition = transform.position;
                     prevRotation = transform.rotation;
                 }
@@ -188,7 +186,7 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
         }
         else
         {
-            if (!recRep.replaying)
+            //if (!recRep.replaying)
             {
                 startingPoseSet = false;
                 prevPosition = Vector3.zero;
@@ -203,6 +201,8 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
 
     public void ProcessMessage(ReferenceCountedSceneGraphMessage message)
     {
+        // if it is already grabbed before an incoming message that might set isGrabbed2 = false
+        // then isGrabbed stays true and needs to be set false some other way!!!
         if (!isGrabbed) // if it is not grabbed by current live avatar to avoid flickering between positions
         {
             //Debug.Log("Process Message RIO");
@@ -212,29 +212,43 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
             isGrabbed2 = msg.isGrabbed2;
             rb.isKinematic = msg.isKinematic;
         }
+        else
+        {
+            isGrabbed2 = false;
+        }
     }
 
-    
+    private RIOInteractable rioI;
     private void OnTriggerStay(Collider other)
     {
-        if (other.TryGetComponent(out handAnim))
+        //Debug.Log(isGrabbed + " " + isGrabbed2);
+        if (isGrabbed2)
+            return;
+
+        if (other.TryGetComponent(out rioI)) // not ideal, but ok for now
         {
-            (var left, var right) = handAnim.GetGripTargets();
+            //Debug.Log("got interactable");
+            (var left, var right) = rioI.handAnimation.GetGripTargets();
 
             if (right > 0.8 || left > 0.8)
             {
+                //Debug.Log("wants to grab if nobody else does");
                 if (!isGrabbed) // real user is not grabbing
                 {
-                    Debug.Log("recorded avatar grab");
+                    Debug.Log("Recorded avatar grab");
                     RecordedGrasp(other.transform);
                     // then it is grabbed but by the recorded avatar
                 }
             }
             else
             {
-                if (other.transform.position.Equals(handTransform.position)) // recorded avatar is holding the object
+                //Debug.Log("grip button < 0.8: " + right);
+                //if (handTransform != null) 
+                //    Debug.Log(handTransform.position.ToString() + " " + other.transform.position.ToString());
+                
+                if (handTransform != null && other.transform.position.Equals(handTransform.position)) // recorded avatar is holding the object
                 {
-                    Debug.Log("Force release");
+                    Debug.Log("OnTriggerStay: Force release");
                     ForceRelease();
                 }
             }
