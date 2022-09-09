@@ -45,6 +45,10 @@ public class Recorder
         pckgSizePerFrame = new List<int>();
         idxFrameStart = new List<long>();
     }
+    public float GetRecordingStartTime()
+    {
+        return recordingStartTime;
+    }
 
     public int GetFrameNr() { return frameNr; }
 
@@ -147,39 +151,68 @@ public class Recorder
 
     public void SaveRecordingInfo()
     {
-        if (recordedObjectIds != null && recordFileIDs != null) // save objectids and texture uids once recording is done
+        // sometimes recording button is pressed accidentally, when that happens and the recording is stopped immediately
+        // we don't want to save any recording info
+        if (Time.unscaledTime - recordingStartTime >= 2.0f) 
         {
-            Debug.Log("Save recording info");
-            binaryWriter.Dispose();
+            if (recordedObjectIds != null && recordFileIDs != null) // save objectids and texture uids once recording is done
+            {
+                Debug.Log("Save recording info");
+                binaryWriter.Dispose();
 
-            Debug.Log("FrameNr, pckgsize, idxFrameStart" + frameNr + " " + pckgSizePerFrame.Count + " " + idxFrameStart.Count);
+                Debug.Log("FrameNr, pckgsize, idxFrameStart" + frameNr + " " + pckgSizePerFrame.Count + " " + idxFrameStart.Count);
 
-            recRep.audioRecRep.WriteLastSamplesOnRecordingStopped();
-            var audioInfoData = recRep.audioRecRep.GetAudioRecInfoData(); // order of objectids could be different than order in recordedObjectIds (only has avatar ids)
+                recRep.audioRecRep.WriteLastSamplesOnRecordingStopped();
+                var audioInfoData = recRep.audioRecRep.GetAudioRecInfoData(); // order of objectids could be different than order in recordedObjectIds (only has avatar ids)
 
-            File.WriteAllText(recordFileIDs, JsonUtility.ToJson(new RecordingInfo(frameNr-1, 
-                new List<NetworkId>(audioInfoData.Item1.Keys), new List<short>(audioInfoData.Item1.Values), new List<int>(audioInfoData.Item2),
-                recordedObjectIds.Count,
-                new List<NetworkId>(recordedObjectIds.Keys), new List<string>(textures.Values), new List<string>(recordedObjectIds.Values),
-                frameTimes, pckgSizePerFrame, idxFrameStart), true));
-
-            // Clear variables
-            OnRecordingStopped.Invoke(this, EventArgs.Empty);
-            textures.Clear();
-            recordedObjectIds.Clear();
-            recordFileIDs = null;
-            pckgSizePerFrame.Clear();
-            idxFrameStart.Clear();
-            frameTimes.Clear();
-            recordingStartTime = 0.0f;
-            messages = null;
-
-            initFile = false;
-            frameNr = previousFrame = 0;
-            recRep.timeInfo.text = "";
-            Debug.Log("Recording info saved");
+                File.WriteAllText(recordFileIDs, JsonUtility.ToJson(new RecordingInfo(frameNr-1, 
+                    new List<NetworkId>(audioInfoData.Item1.Keys), new List<short>(audioInfoData.Item1.Values), new List<int>(audioInfoData.Item2),
+                    recordedObjectIds.Count,
+                    new List<NetworkId>(recordedObjectIds.Keys), new List<string>(textures.Values), new List<string>(recordedObjectIds.Values),
+                    recRep.marker.GetMarkers(),
+                    frameTimes, pckgSizePerFrame, idxFrameStart), true));
+                Debug.Log("Recording info saved");
+            }
 
         }
+        else
+        {
+            // delete files that might have been created
+            var fiRec = new FileInfo(recRep.recordFile);
+            var fiAudio = new FileInfo(recRep.audioRecordFile);
+            var fiIDs = new FileInfo(recordFileIDs);
+            if (fiRec.Exists)
+            {
+                fiRec.Delete();
+            }
+            if (fiAudio.Exists)
+            {
+                fiAudio.Delete();
+            }
+            if (fiIDs.Exists)
+            {
+                fiIDs.Delete();
+            }
+            Debug.Log("Accidental recording: Delete files");
+                
+        }
+
+        // Clear variables
+        recRep.marker.ClearMarkerList();
+        OnRecordingStopped.Invoke(this, EventArgs.Empty);
+        textures.Clear();
+        recordedObjectIds.Clear();
+        recordFileIDs = null;
+        pckgSizePerFrame.Clear();
+        idxFrameStart.Clear();
+        frameTimes.Clear();
+        recordingStartTime = 0.0f;
+        messages = null;
+
+        initFile = false;
+        frameNr = previousFrame = 0;
+        recRep.timeInfo.text = "";
+
     }
 }
 
@@ -608,6 +641,8 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
     public UnityEngine.UI.Text timeInfo; // for recordings
     public UnityEngine.UI.Text replayTimeInfo; // for replays
 
+    [HideInInspector] public Marker marker; // markers to mark special events during a recording
+
     public string replayFile;
     [HideInInspector] public string recordFile = null;
     [HideInInspector] public string audioRecordFile = null;
@@ -673,6 +708,8 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
         }
         aManager = scene.GetComponentInChildren<AvatarManager>();
         spawner = NetworkSpawner.FindNetworkSpawner(scene);
+
+        marker = GetComponent<Marker>(); 
 
         // create Recorder and Replayer
         Debug.Log("Assign RecorderReplayer to Recorder and Replayer");
