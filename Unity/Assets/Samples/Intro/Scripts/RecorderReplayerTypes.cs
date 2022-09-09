@@ -147,14 +147,14 @@ namespace RecorderReplayerTypes {
         public List<NetworkId> objectids; // objectids from prefabs (unnecessary?)
         public List<string> textures; // textures
         public List<string> prefabs; // prefabs
-        public List<float> markers; // two consecutive values indicate the begin and end of a significant occurence
+        public List<Marker.AvatarMarkers> markerLists; // two consecutive values indicate the begin and end of a significant occurence
         public List<float> frameTimes;
         public List<int> pckgSizePerFrame;
         public List<long> idxFrameStart; // long! index could get extremely high
 
         public RecordingInfo(int frames, List<NetworkId> objectidsToClipNumber, List<short> clipNumber, List<int> audioClipLengths, int numberOfObjects, 
             List<NetworkId> objectids, List<string> textures, List<string> prefabs,
-            List<float> markers,
+            List<Marker.AvatarMarkers> markerLists,
             List<float> frameTimes, List<int> pckgSizePerFrame, List<long> idxFrameStart)
         {
             listLengths = new int[3] { frameTimes.Count, pckgSizePerFrame.Count, idxFrameStart.Count };
@@ -166,7 +166,7 @@ namespace RecorderReplayerTypes {
             this.objectids = objectids;
             this.textures = textures;
             this.prefabs = prefabs;
-            this.markers = markers;
+            this.markerLists = markerLists;
             this.frameTimes = frameTimes;
             this.pckgSizePerFrame = pckgSizePerFrame;
             this.idxFrameStart = idxFrameStart;

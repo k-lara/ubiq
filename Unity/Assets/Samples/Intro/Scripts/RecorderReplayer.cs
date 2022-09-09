@@ -162,6 +162,18 @@ public class Recorder
 
                 Debug.Log("FrameNr, pckgsize, idxFrameStart" + frameNr + " " + pckgSizePerFrame.Count + " " + idxFrameStart.Count);
 
+                // save markers (if necessary from previous recordings too) first one is the oldest avatar
+                List<Marker.AvatarMarkers> markerLists;
+                if (recRep.replayer.recInfo != null)
+                {
+                    markerLists = recRep.replayer.recInfo.markerLists;
+                }
+                else
+                {
+                    markerLists = new List<Marker.AvatarMarkers>();
+                }
+                markerLists.Add(recRep.marker.GetAvatarMarkers()); // add current markers to whichever list (old or new)
+
                 recRep.audioRecRep.WriteLastSamplesOnRecordingStopped();
                 var audioInfoData = recRep.audioRecRep.GetAudioRecInfoData(); // order of objectids could be different than order in recordedObjectIds (only has avatar ids)
 
@@ -169,7 +181,7 @@ public class Recorder
                     new List<NetworkId>(audioInfoData.Item1.Keys), new List<short>(audioInfoData.Item1.Values), new List<int>(audioInfoData.Item2),
                     recordedObjectIds.Count,
                     new List<NetworkId>(recordedObjectIds.Keys), new List<string>(textures.Values), new List<string>(recordedObjectIds.Values),
-                    recRep.marker.GetMarkers(),
+                    markerLists,
                     frameTimes, pckgSizePerFrame, idxFrameStart), true));
                 Debug.Log("Recording info saved");
             }
@@ -198,7 +210,7 @@ public class Recorder
         }
 
         // Clear variables
-        recRep.marker.ClearMarkerList();
+        recRep.marker.ClearCurrentAvatarMarkers();
         OnRecordingStopped.Invoke(this, EventArgs.Empty);
         textures.Clear();
         recordedObjectIds.Clear();

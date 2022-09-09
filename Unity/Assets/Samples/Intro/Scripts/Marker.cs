@@ -17,11 +17,17 @@ public class Marker : MonoBehaviour
 
     // markers indicate the begin and end of a marked region
     // two consecutive float time stams always belong together, the first giving the start and the second giving the end of the marked region
-    private List<float> markers;
-    
-    public List<float> GetMarkers()
+    private AvatarMarkers currentAvatarMarkers;
+
+    [System.Serializable]
+    public class AvatarMarkers
     {
-        return markers;
+        public List<float> markers = new List<float>();
+    }
+
+    public AvatarMarkers GetAvatarMarkers()
+    {
+        return currentAvatarMarkers;
     }
 
     public void MarkData(bool buttonPress)
@@ -40,20 +46,20 @@ public class Marker : MonoBehaviour
                 info.text = "";
             }
             // only save markers when we are actually recording something
-            markers.Add(t);
+            currentAvatarMarkers.markers.Add(t);
         }
     }
 
     // when recording finished and markers are saved clear the list
-    public void ClearMarkerList()
+    public void ClearCurrentAvatarMarkers()
     {
-        markers.Clear();
+        currentAvatarMarkers.markers.Clear();
     }
     
     // Start is called before the first frame update
     void Start()
     {
-        markers = new List<float>();
+        currentAvatarMarkers = new AvatarMarkers();
     }
 
     // Update is called once per frame
