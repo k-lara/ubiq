@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using Ubiq.Avatars;
 using Ubiq.XR;
+using UnityEngine.UI;
 
 public class PrefabSwitcher : MonoBehaviour
 {
     public AvatarManager manager;
     public HandController controller;
     public string currentAvatarPrefabUuid;
+    public Text info;
     private GameObject currentAvatarPrefab;
     public int currentIdx;
 
@@ -20,6 +22,8 @@ public class PrefabSwitcher : MonoBehaviour
         if (!prevPressed && pressed) // only check for button presses (not releases)
         {
             currentIdx++;
+            info.text = "Switch Prefab";
+            StartCoroutine(FadeTextToZeroAlpha(1.0f, info));
 
             if (currentIdx == manager.AvatarCatalogue.prefabs.Count) // loop through prefabs list with each button click
             {
@@ -46,5 +50,15 @@ public class PrefabSwitcher : MonoBehaviour
     void Update()
     {
  
+    }
+
+    public IEnumerator FadeTextToZeroAlpha(float t, Text i)
+    {
+        i.color = new Color(i.color.r, i.color.g, i.color.b, 1);
+        while (i.color.a > 0.0f)
+        {
+            i.color = new Color(i.color.r, i.color.g, i.color.b, i.color.a - (Time.deltaTime / t));
+            yield return null;
+        }
     }
 }
