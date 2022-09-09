@@ -32,8 +32,12 @@ namespace Ubiq.XR
         private ButtonEvent _MenuButtonPress;
         public ButtonEvent MenuButtonPress { get { return _MenuButtonPress; } }
 
-        public Vector2 Joystick;
+        [SerializeField]
+        private ButtonEvent _JoystickPress;
+        public ButtonEvent JoystickPress { get { return _JoystickPress; } }
 
+        public Vector2 Joystick;
+        public bool JoystickClickState;
         // for smooth hand animation transitions
         public float GripValue; 
         public float TriggerValue;
@@ -148,12 +152,17 @@ namespace Ubiq.XR
                 {
                     item.TryGetFeatureValue(CommonUsages.primary2DAxis, out Joystick);
                 }
+                foreach (var item in controllers)
+                {
+                    item.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out JoystickClickState);
+                }
             }
 
             TriggerPress.Update(TriggerState);
             GripPress.Update(GripState);
             PrimaryButtonPress.Update(PrimaryButtonState);
             SecondaryButtonPress.Update(SecondaryButtonState);
+            JoystickPress.Update(JoystickClickState);
             JoystickSwipe.Update(Joystick.x); // why only x and not y?
             //JoystickSwipe.Update(Joystick.y);
         }

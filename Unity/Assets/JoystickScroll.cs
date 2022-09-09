@@ -24,7 +24,6 @@ public class JoystickScroll : MonoBehaviour
             //Debug.Log(scrollRect.verticalNormalizedPosition + " " + controller.Joystick.y + " " + Time.deltaTime);
             scrollRect.verticalNormalizedPosition += controller.Joystick.y * speed * Time.deltaTime;
             //Debug.Log(scrollRect.verticalNormalizedPosition);
-
         }
     }
 }
