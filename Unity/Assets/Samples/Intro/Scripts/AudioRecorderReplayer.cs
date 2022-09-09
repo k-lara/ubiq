@@ -174,7 +174,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         audioMessages.Add(new byte[4]); // length of pack (int)
         audioMessages.Add(new byte[2]); // clip number (short)
 
-        SetClipNumber(CLIPNUMBER++);
+        SetClipNumber(CLIPNUMBER++); // sets it first and then increments 
 
         pointerCols = new Color[height * thickness];
         pointerColsClear = new Color[height * thickness];
@@ -541,7 +541,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             clipNumberToLatency.Clear();
             MuteAllButMasterClip(MASTERONLY);
             // increase the CLIPNUMBER to the number of already existing replays so a subsequent recording has the correct clip number
-            CLIPNUMBER = (short)audioClipLengthsReplay.Count;
+            CLIPNUMBER = (short)audioClipLengthsReplay.Count; // make sure to set it back to 0 in case we do not record a replay but start anew
 
             audioFileStream = File.Open(filepath, FileMode.Open); // open audio byte file for loading audio data into clips
             //foreach (var item in audioClipLengthsReplay)
@@ -646,71 +646,66 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     private AudioMessage ReadAudioDataFromFile(int iterations)
     {
         //Debug.Log("AudioReplayer: ReadAudioDataFromFile");
-        //int iter = 0;
+        int iter = 0;
         int clipPos; 
         byte[] pckgLength = new byte[4];
         byte[] clipNumber = new byte[2];
         byte[] audioPckg = null;
         AudioMessage audioMessage = new AudioMessage();
         //int test = 0;
-        if (audioFileStream.Position < audioFileStream.Length)
-        //while (audioFileStream.Position < audioFileStream.Length)
+        while (iter < iterations)
         {
-            
-            //Debug.Log("stream position " + audioFileStream.Position);
-            audioFileStream.Read(pckgLength, 0, 4);
-            //Debug.Log("stream position " + audioFileStream.Position);
-            audioFileStream.Read(clipNumber, 0, 2);
-            //Debug.Log("stream position " + audioFileStream.Position);
-
-            int l = BitConverter.ToInt32(pckgLength, 0) - 2; // pckgLength/2 = length samples
-            short s = BitConverter.ToInt16(clipNumber, 0);
-            clipPos = audioClipPositions[s];
-
-            //Debug.Log("sizes: " + l + " " + s);
-            audioPckg = new byte[l]; // contains audio data without bytes for short "uuid"
-            audioFileStream.Read(audioPckg, 0, audioPckg.Length);
-            //Debug.Log("stream position " + audioFileStream.Position);
-
-            //SendAudioMessage(new AudioMessage() { messageId = 1, clipNr = s, clipLengthPos = audioClipPositions[s], samples = audioPckg});
-
-            // convert samples to float
-            float[] floatSamples = new float[audioPckg.Length / 2];
-            for (int i = 0; i < audioPckg.Length; i+=2)
+            if (audioFileStream.Position < audioFileStream.Length)
+            //while (audioFileStream.Position < audioFileStream.Length)
             {
-                short sample = BitConverter.ToInt16(audioPckg, i);
-                //testStreamWriterReplay.Write(sample + ",");
+                //Debug.Log("stream position " + audioFileStream.Position);
+                audioFileStream.Read(pckgLength, 0, 4);
+                //Debug.Log("stream position " + audioFileStream.Position);
+                audioFileStream.Read(clipNumber, 0, 2);
+                //Debug.Log("stream position " + audioFileStream.Position);
 
-                var floatSample = ((float)sample) / short.MaxValue;
-                floatSamples[i/2] = Mathf.Clamp(floatSample * gain, -.999f, .999f);
+                int l = BitConverter.ToInt32(pckgLength, 0) - 2; // pckgLength/2 = length samples
+                short s = BitConverter.ToInt16(clipNumber, 0);
+                clipPos = audioClipPositions[s];
+
+                //Debug.Log("sizes: " + l + " " + s);
+                audioPckg = new byte[l]; // contains audio data without bytes for short "uuid"
+                audioFileStream.Read(audioPckg, 0, audioPckg.Length);
+                //Debug.Log("stream position " + audioFileStream.Position);
+
+                // convert samples to float
+                float[] floatSamples = new float[audioPckg.Length / 2];
+                for (int i = 0; i < audioPckg.Length; i+=2)
+                {
+                    short sample = BitConverter.ToInt16(audioPckg, i);
+                    //testStreamWriterReplay.Write(sample + ",");
+
+                    var floatSample = ((float)sample) / short.MaxValue;
+                    floatSamples[i/2] = Mathf.Clamp(floatSample * gain, -.999f, .999f);
+                }
+                // set audio data in audio clip
+                //Debug.Log("AudioClip positions: " + s + " " + clipPos);
+                audioMessage = new AudioMessage() { messageId = 1, clipNr = s, clipLengthPos = audioClipPositions[s], samples = audioPckg };
+                SendAudioMessage(audioMessage);
+                
+                replayedAudioSources[s].clip.SetData(floatSamples, clipPos);   
+                audioClipPositions[s] += floatSamples.Length; // advance position
+
             }
-            // set audio data in audio clip
-            //Debug.Log("AudioClip positions: " + s + " " + clipPos);
-            audioMessage = new AudioMessage() { messageId = 1, clipNr = s, clipLengthPos = audioClipPositions[s], samples = audioPckg };
-            replayedAudioSources[s].clip.SetData(floatSamples, clipPos);   
-            audioClipPositions[s] += floatSamples.Length; // advance position
-
-            // add waveform to a canvas and show it to the user
-
-            //iter++;
-            //if (iter == iterations)
-            //{
-            //    return new AudioMessage() { messageId = 1, clipNr = s, clipLengthPos = audioClipPositions[s], samples = audioPckg };
-            //}
+            iter++;
         }
         if (audioFileStream.Position >= audioFileStream.Length)
         {
             Debug.Log("Finished reading audio data!");
             startReadingFromFile = false;
-
+            
             SetLatencies();
 
             waveformTextures = new List<Texture2D>();
             pointersToSamples = new List<Texture2D>();
             prevPointerPos = new int[replayedAudioSources.Count];
 
-
-
+            // add waveform to a canvas and show it to the user
             int i = 0;
             foreach (var source in replayedAudioSources.Values)
             {
@@ -802,18 +797,18 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 {
                     if (deltaReadingTime >= 0.025f)
                     {
-                        if (pckgSamples > 0)
-                        {
-                            AudioMessage amsg = ReadAudioDataFromFile(1);
+                        //if (pckgSamples > 0)
+                        //{
+                            AudioMessage amsg = ReadAudioDataFromFile(3);
                             //if (amsg.samples == null)
                             //{
                             //    break;
                             //}
-                            SendAudioMessage(amsg);
-                            pckgSamples -= amsg.samples.Length;
+                            //SendAudioMessage(amsg);
+                            //pckgSamples -= amsg.samples.Length;
                        
-                        }
-                        pckgSamples = MAXPCKGS;
+                        //}
+                        //pckgSamples = MAXPCKGS;
                         startTime = Time.unscaledTime;
                     }
 
@@ -897,6 +892,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     }
     private void ClearReplay()
     {
+        CLIPNUMBER = 0; // reset to 0 so a new recording without a replay has the correct CLIPNUMBER
         pressedPlayFirstTime = false;
         audioDataAvailable = false;
         if (objectidToClipNumberReplay != null)
