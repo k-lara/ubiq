@@ -14,6 +14,8 @@ using Ubiq.Rooms;
 using Ubiq.Samples;
 using RecorderReplayerTypes;
 using Ubiq.Voip;
+using UnityEngine.UI;
+
 
 public class Recorder
 {
@@ -36,6 +38,9 @@ public class Recorder
     private MessagePack messages = null;
    
     private float recordingStartTime = 0.0f;
+
+    //public float currentReplayTimeAtRecordingStartTime = 0.0f;
+    public int replayFrameOnRecordingStart;
 
     public Recorder(RecorderReplayer recRep)
     {
@@ -82,6 +87,11 @@ public class Recorder
             binaryWriter = new BinaryWriter(File.Open(recRep.recordFile, FileMode.OpenOrCreate)); // dispose when recording is finished
             // start recoding time
             recordingStartTime = Time.unscaledTime;
+            // if a replay is going on save the current time of the replay so we know the difference in starting times
+            if (recRep.replaying)
+            {
+                replayFrameOnRecordingStart = recRep.currentReplayFrame;
+            }
 
             // create message pack for first frame (frameNr == 0)
             messages = new MessagePack();
@@ -166,14 +176,32 @@ public class Recorder
                 List<Marker.AvatarMarkers> markerLists;
                 if (recRep.replayer.recInfo != null)
                 {
+                    Debug.Log(recRep.replayer.recInfo.frames);
+                    var startOfRecInRep = recRep.replayer.recInfo.frameTimes[replayFrameOnRecordingStart];
                     markerLists = recRep.replayer.recInfo.markerLists;
+                    
+                    for (int i = 0; i < markerLists.Count; i++) // correct the time stamps according to new recording length
+                    {
+                        for (int j = 0; j < markerLists[i].markers.Count; j++)
+                        {
+                            var diff = markerLists[i].markers[j] - startOfRecInRep;
+                            if (diff < 0)
+                            {
+                                markerLists[i].markers[j] = 0;
+                            }
+                            else
+                            {
+                                markerLists[i].markers[j] = diff;
+                            }
+                        }
+                    }
                 }
                 else
                 {
                     markerLists = new List<Marker.AvatarMarkers>();
                 }
                 markerLists.Add(recRep.marker.GetAvatarMarkers()); // add current markers to whichever list (old or new)
-
+                markerLists.Add(recRep.marker.GetControllerMarkers()); // markers when controller is gripped (could be either of the two)
                 recRep.audioRecRep.WriteLastSamplesOnRecordingStopped();
                 var audioInfoData = recRep.audioRecRep.GetAudioRecInfoData(); // order of objectids could be different than order in recordedObjectIds (only has avatar ids)
 
@@ -219,6 +247,7 @@ public class Recorder
         idxFrameStart.Clear();
         frameTimes.Clear();
         recordingStartTime = 0.0f;
+        replayFrameOnRecordingStart = 0;
         messages = null;
 
         initFile = false;
@@ -450,12 +479,18 @@ public class Replayer
         if (File.Exists(filepath))
         {
             Debug.Log("Load info...");
+            Color opaque = recRep.loadingInfoText.color;
+            opaque.a = 1.0f;
+            Debug.Log("Color: " + opaque.ToString());
+            recRep.loadingInfoText.color = opaque;
+            recRep.loadingInfoText.text = "Loading...";
             recInfo = await LoadRecInfo(filepath);
             OnLoadingReplay.Invoke(this, recInfo);
 
             //Debug.Log(recInfo.frames + " " + recInfo.frameTimes.Count + " " + recInfo.pckgSizePerFrame.Count);
             objectsCreated = CreateRecordedObjects();
-            recRep.audioRecRep.OnLoadingReplay(recInfo);
+            recRep.marker.SetReplayedMarkers(recInfo); // objects need to have been created 
+            recRep.audioRecRep.OnLoadingReplay(recInfo); // this also sets the audio indicators which need marker info already
             Debug.Log("Info loaded!");
         }
         else
@@ -652,6 +687,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
 
     public UnityEngine.UI.Text timeInfo; // for recordings
     public UnityEngine.UI.Text replayTimeInfo; // for replays
+    public Text loadingInfoText; 
 
     [HideInInspector] public Marker marker; // markers to mark special events during a recording
 
