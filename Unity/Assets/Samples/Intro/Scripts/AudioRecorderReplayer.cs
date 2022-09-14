@@ -410,7 +410,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         {
             manager.WriteRemainingAudioData();
         }
-        if (recRep.replaying) // write new replay to file again
+        if (replayedAudioSources != null) // write new replay to file again
         {
             Debug.Log("Write replayed audio data");
             WriteReplayedClipsToFile();
@@ -592,8 +592,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         speechIndicator.SetReplayAudioSource(audioSource);
         speechIndicators.Add(clipNr, speechIndicator);
 
+        var ai = gameObject.GetComponentInChildren<AudioIndicator>();
         // for displaying waveforms
-        audioIndicators.Add(gameObject.GetComponentInChildren<AudioIndicator>());
+        audioIndicators.Add(ai);
 
         audioSource.clip = AudioClip.Create(
         name: "AudioClip " + clipNr + " id: " + id.ToString(),
@@ -608,6 +609,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         replayedAudioSources.Add(clipNr, audioSource);
         audioClipPositions.Add(clipNr, 0);
         clipNumberToLatency.Add(clipNr, 0);
+
+        recRep.marker.CreateMarkerCanvas(id, ai);
     }
 
     private void CreateRemoteAudioClip(NetworkId id, short clipNr, int clipLength)
@@ -697,6 +700,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         if (audioFileStream.Position >= audioFileStream.Length)
         {
             Debug.Log("Finished reading audio data!");
+            recRep.loadingInfoText.text = "Loading finished!";
+            StartCoroutine(recRep.marker.FadeTextToZeroAlpha(2.0f, recRep.loadingInfoText));
+            //recRep.loadingInfoText.CrossFadeAlpha(0.0f, 2.0f, false);
             startReadingFromFile = false;
             
             SetLatencies();
@@ -860,7 +866,10 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             //Debug.Log(pointerPos + " " + height + " " + pointerCols.Length);
 
             tex.SetPixels(prev, 0, thickness, height, pointerColsClear);
-            tex.SetPixels(pointerPos, 0, thickness, height, pointerCols);
+            if (pointerPos < width-thickness)
+            {
+                tex.SetPixels(pointerPos, 0, thickness, height, pointerCols);
+            }
             tex.Apply();
             prevPointerPos[i] = pointerPos;
         }
@@ -892,7 +901,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     }
     private void ClearReplay()
     {
-        CLIPNUMBER = 0; // reset to 0 so a new recording without a replay has the correct CLIPNUMBER
+        // (don't do CLIPNUMBER = 0 as it won't reset the sourceCLIPNUMBER)
+        SetClipNumber(0); // reset to 0 so a new recording without a replay has the correct CLIPNUMBER 
         pressedPlayFirstTime = false;
         audioDataAvailable = false;
         if (objectidToClipNumberReplay != null)
