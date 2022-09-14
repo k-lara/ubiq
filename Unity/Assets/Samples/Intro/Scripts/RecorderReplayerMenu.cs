@@ -302,11 +302,28 @@ public class RecorderReplayerMenu : MonoBehaviour
             }
             else // start recording
             {
-                Debug.Log("Toggle Record (START)");
-                recordImage.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
-                recordText.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
-                recRep.recording = true;
-                recRep.SetRecordingStartTime(System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+                if (recRep.replaying)
+                {
+                    // if a replay is loaded but not played prevent recording otherwise inconsistencies
+                    // will occur when the replay is started during a recording. then the audio indicators are confused
+                    // and the markers too... and I have not fixed this yet
+                    if (recRep.play) 
+                    {
+                        Debug.Log("Toggle Record (START)");
+                        recordImage.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
+                        recordText.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
+                        recRep.recording = true;
+                        recRep.SetRecordingStartTime(System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+                    }
+                }
+                else
+                {
+                    Debug.Log("Toggle Record (START)");
+                    recordImage.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
+                    recordText.color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
+                    recRep.recording = true;
+                    recRep.SetRecordingStartTime(System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+                }
             }
 
         }
