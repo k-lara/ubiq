@@ -37,7 +37,9 @@ public class Marker : MonoBehaviour
 
     private List<AvatarMarkers> replayedMarkers;
     private float replayLength;
+    private List<float> frameTimes;
     private NetworkSpawner spawner;
+    private Dictionary<short, NetworkId> clipNrToOldIds;
 
     // markers indicate the begin and end of a marked region
     // two consecutive float time stamps always belong together, the first giving the start and the second giving the end of the marked region
@@ -51,6 +53,8 @@ public class Marker : MonoBehaviour
         //spawner = NetworkSpawner.FindNetworkSpawner(NetworkScene.FindNetworkScene(this));
         currentAvatarMarkers = new AvatarMarkers();
         handGripMarkers = new AvatarMarkers();
+        clipNrToOldIds = new Dictionary<short, NetworkId>();
+
         markerLine = new Color[height * thickness];
         markerLine2 = new Color[height * thickness];
 
@@ -61,10 +65,20 @@ public class Marker : MonoBehaviour
         }
     }
 
+    public List<float> GetFrameTimes()
+    {
+        return frameTimes;
+    }
+    public float GetReplayLength()
+    {
+        return replayLength;
+    }
+
     public void SetReplayedMarkers(RecorderReplayerTypes.RecordingInfo recInfo)
     {
         //Debug.Log("recinfo markerlist " + recInfo.markerLists.Count);
         replayedMarkers = recInfo.markerLists;
+        frameTimes = recInfo.frameTimes;
         replayLength = recInfo.frameTimes[recInfo.frameTimes.Count - 1];
         markerTextures = new Dictionary<NetworkId, Texture2D>();
         foreach (var markerList in replayedMarkers)
@@ -87,8 +101,32 @@ public class Marker : MonoBehaviour
         Debug.Log("# replayed markers: " + replayedMarkers.Count);
     }
 
-    public void CreateMarkerCanvas(NetworkId id, AudioIndicator ai)
+    public void AddClipNumber(NetworkId id, short clipNr)
     {
+        // we get a new id and a clipnumber, we compare in the oldNewIds dict which of the old
+        // ids corresponds to the new one, and then save the clipnumber together with the old one
+        // so we know which markers to take from the marker list
+        foreach (var markerList in replayedMarkers)
+        {
+            try
+            {
+                var newId = recRep.replayer.oldNewIds[markerList.id];
+                if (newId.Equals(id))
+                {
+                    clipNrToOldIds.Add(clipNr, markerList.id);
+                }
+            }
+            catch
+            {
+                Debug.Log("Marker Class: id not found in oldNewIds dict");
+            }
+        }
+    }
+    // latency in ms (around 210ms)
+    public void CreateMarkerCanvas(short clipNr, AudioIndicator ai, AudioClip clip, int latencySamples, int latency)
+    {
+        var latencyInSeconds = latency / 1000.0f;
+        var oldId = clipNrToOldIds[clipNr];
         var i = 0;
         if (replayedMarkers == null)
         {
@@ -102,20 +140,23 @@ public class Marker : MonoBehaviour
             {
                 var newId = recRep.replayer.oldNewIds[markerList.id];
                 
-                if (newId == id) 
+                if (oldId.Equals(markerList.id)) 
                 {
+                    
                     Debug.Log("Add a marker");
+                    Debug.Log("rec vs audio/(-latency) length: " + replayLength + ", " + clip.length + ", " + latencySamples);
                     // get texture from dict
                     var tex = markerTextures[markerList.id];
-                    float size = replayLength / (float)width; // length the replay has on the texture
-                    Debug.Log("size : " + size);
+                    float size = replayLength / width; // length the replay has on the texture
                     // draw markers
                     for (int m = 0; m < markerList.markers.Count; m+=2)
                     {
-                        var start = Mathf.RoundToInt(markerList.markers[m] / size);
-                        var end = Mathf.RoundToInt(markerList.markers[m + 1] / size);
+                        Debug.Log("Latency in seconds: " + latencyInSeconds + " clipNr " + clipNr);
+                        var start = Mathf.RoundToInt((markerList.markers[m]) / size);
+                        var end = Mathf.RoundToInt((markerList.markers[m + 1]) / size);
+                        Debug.Log(start + " " + end);
                     
-                        for (int s = start; s < end; s+=2) // thickness 
+                        for (int s = start; s < end && s < width; s+=2) // thickness 
                         {
                             if (markerList.source == 0)
                             {
@@ -214,6 +255,7 @@ public class Marker : MonoBehaviour
     {
         currentAvatarMarkers.markers.Clear();
         handGripMarkers.markers.Clear();
+        clipNrToOldIds.Clear();
     }
     public IEnumerator FadeTextToZeroAlpha(float t, Text i)
     {

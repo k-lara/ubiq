@@ -19,7 +19,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 {
     public const int LATENCY = 200; // ms
     public const int SAMPLINGFREQ = 16000;
-    public const int NUMSAMPLES = SAMPLINGFREQ * 2;
+    public const int NUMSAMPLES = SAMPLINGFREQ; // * 2;
     public static bool MASTERONLY = false;
     private bool audioDataAvailable = false;
     //public NetworkId Id => new NetworkId("a647002b-053e-4585-8cdc-7e2bd17b0ec2");
@@ -102,6 +102,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     private float gain = 1.0f;
 
     private int pointerLatency = (SAMPLINGFREQ / 1000) * LATENCY;
+    private float replayLength;
+    private List<float> frameTimes;
     public UnityEngine.UI.RawImage waveFormTextureTest;
     public UnityEngine.UI.RawImage texturePointerTest;
 
@@ -378,7 +380,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             foreach (var item in replayedAudioSources)
             {
                 Debug.Log("replayed audio sources (rec info data): " + item.Key);
-                var avatar = item.Value.gameObject.GetComponent<Ubiq.Avatars.Avatar>();
+                var avatar = item.Value.gameObject.transform.parent.parent.gameObject.GetComponent<Ubiq.Avatars.Avatar>();
                 //Debug.Log("old replay: " + avatar.Id.ToString() + " " + item.Key + " " + replayedAudioClipsRecordedLength[item.Key]);
                 objectidToClipNumber.Add(avatar.Id, item.Key);
                 audioClipLengths.Add(replayedAudioClipsRecordedLength[item.Key]);
@@ -587,7 +589,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     {
         //Debug.Log("AudioRecorderReplayer CreateAudioClip");
         var gameObject = spawner.spawned[id];
-        var audioSource = gameObject.AddComponent<AudioSource>();
+        var audioSource = gameObject.transform.GetChild(0).GetChild(0).gameObject.AddComponent<AudioSource>(); // add this to head!!!
         var speechIndicator = gameObject.GetComponentInChildren<SpeechIndicator>();
         speechIndicator.SetReplayAudioSource(audioSource);
         speechIndicators.Add(clipNr, speechIndicator);
@@ -610,7 +612,10 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         audioClipPositions.Add(clipNr, 0);
         clipNumberToLatency.Add(clipNr, 0);
 
-        recRep.marker.CreateMarkerCanvas(id, ai);
+        //recRep.marker.CreateMarkerCanvas(id, ai, LATENCY);
+        recRep.marker.AddClipNumber(id, clipNr);
+        replayLength = recRep.marker.GetReplayLength();
+        frameTimes = recRep.marker.GetFrameTimes();
     }
 
     private void CreateRemoteAudioClip(NetworkId id, short clipNr, int clipLength)
@@ -634,7 +639,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         GameObject gameObject = null;
         Debug.Log("Wait until object " + id.ToString() + " is created...");
         yield return new WaitUntil(() => spawner.spawned.TryGetValue(id, out gameObject));
-        var audioSource = gameObject.AddComponent<AudioSource>();
+        var audioSource = gameObject.transform.GetChild(0).GetChild(0).gameObject.AddComponent<AudioSource>();
         audioSource.clip = fromRemoteReplayedClips[clipNr];
         audioSource.ignoreListenerPause = false;
         audioSource.spatialBlend = 1.0f;
@@ -709,21 +714,27 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 
             waveformTextures = new List<Texture2D>();
             pointersToSamples = new List<Texture2D>();
+            pointersPackSize = new List<float>();
             prevPointerPos = new int[replayedAudioSources.Count];
 
             // add waveform to a canvas and show it to the user
             int i = 0;
-            foreach (var source in replayedAudioSources.Values)
+            foreach (var item in replayedAudioSources)
             {
                 Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
                 Texture2D texTransparent = new Texture2D(width, height, TextureFormat.RGBA32, false);
-                
+
+                var latency = clipNumberToLatency[item.Key];
+                Debug.Log("Waveform Latency: " + latency);
+
                 SetTextureBackground(tex, texTransparent, Color.clear, width, height);
-                DrawWaveform(tex, texTransparent, source.clip, width, height, playerCols[i]);
+                DrawWaveform(tex, texTransparent, item.Value.clip, latency,  width, height, playerCols[i]);
                 
                 // add finished texture to audioIndicators
                 audioIndicators[i].waveformTex.texture = waveformTextures[i];
                 audioIndicators[i].pointerTex.texture = pointersToSamples[i];
+           
+                recRep.marker.CreateMarkerCanvas(item.Key, audioIndicators[i], item.Value.clip, item.Value.clip.samples - latency, latenciesMs[i]);
                 
                 if (i < playerCols.Length)
                 {
@@ -750,17 +761,19 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         }
     }
 
-    public void DrawWaveform(Texture2D tex, Texture2D texTransparent, AudioClip clip, int width, int height, Color col)
+    public void DrawWaveform(Texture2D tex, Texture2D texTransparent, AudioClip clip, int latency, int width, int height, Color col)
     {
         //Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
         //Texture2D texTransparent = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        int latencySamples = clip.samples - latency;
 
-        float[] samples = new float[clip.samples * clip.channels];
+        float[] samples = new float[latencySamples * clip.channels];
         float[] waveform = new float[width];
 
         clip.GetData(samples, 0);
 
         float packSize = ((float)samples.Length / (float)width);
+        pointersPackSize.Add(packSize);
         int s = 0;
 
         for (float i = 0; Mathf.RoundToInt(i) < samples.Length && s < waveform.Length; i+=packSize)
@@ -841,9 +854,10 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 if (recRep.replaying && recRep.play && audioDataAvailable && !startReadingFromFile)
                 {
                     var i = 0;
-                    foreach (var source in replayedAudioSources.Values)
+                    foreach (var item in replayedAudioSources)
                     {
-                        DrawPointerOnWaveform(i, source, width, height, pointerLatency);
+                        var latency = clipNumberToLatency[item.Key];
+                        DrawPointerOnWaveform(i, item.Value, width, height, latency);
                         i++;
                     }
                 }
@@ -852,15 +866,16 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         }
     }
 
+    List<float> pointersPackSize;
     public void DrawPointerOnWaveform(int i, AudioSource source, int width, int height, int latency)
     {
         var tex = pointersToSamples[i];
         var prev = prevPointerPos[i];
-        float packSize = ((float)source.clip.samples / (float)width);
+        var packSize = replayLength / width;
 
-        int pointerPos = Mathf.RoundToInt(((float)source.timeSamples - (float)latency) / packSize);
-
-        if (pointerPos != prev && pointerPos > 0)
+        int pointerPos = Mathf.RoundToInt(frameTimes[recRep.currentReplayFrame] / packSize);
+        //Debug.Log(pointerPos);
+        if (pointerPos != prev)
         {
             //Debug.Log(prev + " " + height + " " + pointerColsClear.Length);
             //Debug.Log(pointerPos + " " + height + " " + pointerCols.Length);
@@ -869,9 +884,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             if (pointerPos < width-thickness)
             {
                 tex.SetPixels(pointerPos, 0, thickness, height, pointerCols);
+                prevPointerPos[i] = pointerPos;
             }
             tex.Apply();
-            prevPointerPos[i] = pointerPos;
         }
     }
 

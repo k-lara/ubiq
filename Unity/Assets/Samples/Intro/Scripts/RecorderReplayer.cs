@@ -200,8 +200,16 @@ public class Recorder
                 {
                     markerLists = new List<Marker.AvatarMarkers>();
                 }
-                markerLists.Add(recRep.marker.GetAvatarMarkers()); // add current markers to whichever list (old or new)
-                markerLists.Add(recRep.marker.GetControllerMarkers()); // markers when controller is gripped (could be either of the two)
+                var am = recRep.marker.GetAvatarMarkers();
+                var cm = recRep.marker.GetControllerMarkers();
+                if (am.markers.Count != 0)
+                {
+                    markerLists.Add(am); // add current markers to whichever list (old or new)
+                }
+                if (cm.markers.Count != 0)
+                {
+                    markerLists.Add(cm); // markers when controller is gripped (could be either of the two)
+                }
                 recRep.audioRecRep.WriteLastSamplesOnRecordingStopped();
                 var audioInfoData = recRep.audioRecRep.GetAudioRecInfoData(); // order of objectids could be different than order in recordedObjectIds (only has avatar ids)
 
