@@ -10,6 +10,7 @@ public class AudioIndicator : MonoBehaviour
     public RawImage pointerTex;
     public RawImage markerTex;
     public Canvas canvas;
+    public GameObject canvasGO;
     public Camera mainCamera;
     public Avatar avatar;
 
