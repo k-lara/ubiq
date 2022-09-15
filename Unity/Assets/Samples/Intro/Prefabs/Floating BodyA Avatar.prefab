@@ -714,6 +714,7 @@ MonoBehaviour:
   pointerTex: {fileID: 6645139044234223059}
   markerTex: {fileID: 2684009528665958434}
   canvas: {fileID: 5805497184633729400}
+  canvasGO: {fileID: 3528684865719132959}
   mainCamera: {fileID: 0}
   avatar: {fileID: 2075108970}
 --- !u!1 &7079343952554854292
