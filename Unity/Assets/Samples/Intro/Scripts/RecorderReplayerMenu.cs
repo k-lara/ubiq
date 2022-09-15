@@ -17,7 +17,8 @@ public class RecorderReplayerMenu : MonoBehaviour
     public NetworkScene scene;
     public Sprite playSprite;
     public Sprite pauseSprite;
-    
+    public Sprite background;
+
     public GameObject buttonPrefab; // for scroll view content
 
     public Button recordReplayButtonMain;
@@ -257,7 +258,15 @@ public class RecorderReplayerMenu : MonoBehaviour
             //var file = recordings[i];
             GameObject go = Instantiate(buttonPrefab, content.transform);
             var button = go.GetComponent<Button>();
-            button.image.color = Color.clear;
+            button.image.color = Color.white;
+            button.image.sprite = background;
+            ColorBlock colors = button.colors;
+            colors.normalColor = Color.clear;
+            colors.highlightedColor = new Color(0, 1, 0, 0.4f);
+            colors.pressedColor = new Color(0.03f, 0.64f, 0.07f, 1.0f);
+            colors.selectedColor = colors.pressedColor;
+            button.colors = colors;
+
             button.onClick.AddListener(delegate { SelectReplayFile(file); } );
             //go.GetComponent<Button>().onClick.AddListener(delegate { CloseFileWindow(content); });
             button.transform.SetAsFirstSibling();
