@@ -35,7 +35,7 @@ public class DummyAvatarPoser : MonoBehaviour
             {
                 Debug.Log("Delete dummy");
                 info.text = "Delete Dummy";
-                StartCoroutine(FadeTextToZeroAlpha(1.0f, info));
+                StartCoroutine(FadeTextToZeroAlpha(1.5f, info));
                 Destroy(dummies.Dequeue());
             }
         }
@@ -47,12 +47,14 @@ public class DummyAvatarPoser : MonoBehaviour
         {
             Debug.Log("Pose Dummy");
             info.text = "Pose Dummy";
-            StartCoroutine(FadeTextToZeroAlpha(1.0f, info));
+            StartCoroutine(FadeTextToZeroAlpha(1.5f, info));
             var currentPrefab = manager.AvatarCatalogue.GetPrefab(manager.LocalPrefabUuid);
             var newDummy = Instantiate(currentPrefab); // avatar isLocal should be false per default
 
             var myFloatingAvatar = manager.LocalAvatar.gameObject.GetComponent<FloatingAvatar>();
             var dummyFloatingAvatar = newDummy.GetComponent<FloatingAvatar>();
+            var audioIndicator = newDummy.GetComponentInChildren<AudioIndicator>();
+            audioIndicator.canvasGO.SetActive(false);
 
             dummyFloatingAvatar.head.position = myFloatingAvatar.head.position;
             dummyFloatingAvatar.head.rotation = myFloatingAvatar.head.rotation;
