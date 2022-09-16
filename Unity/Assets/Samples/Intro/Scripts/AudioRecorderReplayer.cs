@@ -709,7 +709,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         {
             Debug.Log("Finished reading audio data!");
             recRep.loadingInfoText.text = "Loading finished!";
-            StartCoroutine(recRep.marker.FadeTextToZeroAlpha(2.0f, recRep.loadingInfoText));
+            StartCoroutine(recRep.marker.FadeTextToZeroAlpha(1.5f, recRep.loadingInfoText));
             //recRep.loadingInfoText.CrossFadeAlpha(0.0f, 2.0f, false);
             startReadingFromFile = false;
             
@@ -738,7 +738,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 audioIndicators[i].pointerTex.texture = pointersToSamples[i];
 
                 Debug.Log("replay lenghts, motion, audio, samples/sec: " + replayLength + " " + item.Value.clip.length + " " +  item.Value.clip.samples/item.Value.clip.length);
-                recRep.marker.CreateMarkerCanvas(item.Key, audioIndicators[i], item.Value, latency);
+                recRep.marker.CreateMarkerCanvas(item.Key, audioIndicators[i]);
                                 
                 i++;
                 

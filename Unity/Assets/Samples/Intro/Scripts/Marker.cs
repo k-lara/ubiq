@@ -39,7 +39,7 @@ public class Marker : MonoBehaviour
     private float replayLength;
     private List<float> frameTimes;
     private NetworkSpawner spawner;
-    private Dictionary<short, NetworkId> clipNrToOldIds;
+    private Dictionary<short, AvatarMarkers> clipNrToMarkerList;
 
     // markers indicate the begin and end of a marked region
     // two consecutive float time stamps always belong together, the first giving the start and the second giving the end of the marked region
@@ -53,7 +53,7 @@ public class Marker : MonoBehaviour
         //spawner = NetworkSpawner.FindNetworkSpawner(NetworkScene.FindNetworkScene(this));
         currentAvatarMarkers = new AvatarMarkers();
         handGripMarkers = new AvatarMarkers();
-        clipNrToOldIds = new Dictionary<short, NetworkId>();
+        clipNrToMarkerList = new Dictionary<short, AvatarMarkers>();
 
         markerLine = new Color[height * thickness];
         markerLine2 = new Color[height * thickness];
@@ -115,18 +115,18 @@ public class Marker : MonoBehaviour
                 //Debug.Log(newId);
                 if (newId.Equals(id))
                 {
-                    clipNrToOldIds.Add(clipNr, markerList.id);
+                    clipNrToMarkerList.Add(clipNr, markerList);
                     Debug.Log("Add: " + clipNr + " " + markerList.id);
                 }
             }
             catch
             {
+                Debug.Log("ids new old " + id + " " + markerList.id);
                 Debug.Log("Marker Class: id not found in oldNewIds dict");
             }
         }
     }
-    // latency in ms (around 210ms)
-    public void CreateMarkerCanvas(short clipNr, AudioIndicator ai, AudioSource source, int latency)
+    public void CreateMarkerCanvas(short clipNr, AudioIndicator ai)
     {        
         if (replayedMarkers == null)
         {
@@ -135,72 +135,52 @@ public class Marker : MonoBehaviour
             return;
         }
        
-        if (clipNrToOldIds.ContainsKey(clipNr))
+        if (clipNrToMarkerList.ContainsKey(clipNr))
         {
-            var oldId = clipNrToOldIds[clipNr];
-            
-            foreach (var markerList in replayedMarkers)
-            {
-                
-                if (recRep.replayer.oldNewIds.ContainsKey(markerList.id))
-                {
-                    var newId = recRep.replayer.oldNewIds[markerList.id];
-                    if (oldId.Equals(markerList.id)) 
-                    {
-                    
-                        Debug.Log("Add a marker");
-                        // get texture from dict
-                        var tex = markerTextures[markerList.id];
-
-
-                        // need to draw the markers not in relation to replayLength
-                        // but to the length of the audio. to be able to align the pointer
-                        // with audio and markers!
-                        float size = replayLength / width; // length the replay has on the texture
+            var markerList = clipNrToMarkerList[clipNr];
                         
-                        // get length of audio - latency in seconds (float)
-                        //float audioLength = (source.clip.samples - latency) / (float)source.clip.frequency;
-                        //float size = audioLength / width;
-                        // shift markers according to new time
-                        //float scaleFactor = audioLength / replayLength;
-
-                        //Debug.Log("replay, audio, scale: " + replayLength + " " + audioLength + " " + scaleFactor);
-
-
-                        // draw markers
-                        for (int m = 0; m < markerList.markers.Count; m+=2)
-                        {
-                            //Debug.Log("normal vs scaled: " + markerList.markers[m] + " " + markerList.markers[m] * scaleFactor);
-                            var start = Mathf.RoundToInt((markerList.markers[m]) / size);
-                            var end = Mathf.RoundToInt((markerList.markers[m + 1]) / size);
-                            Debug.Log(start + " " + end);
+            if (recRep.replayer.oldNewIds.ContainsKey(markerList.id))
+            {
+                var newId = recRep.replayer.oldNewIds[markerList.id];
                     
-                            for (int s = start; s < end && s < width; s+=2) // thickness 
-                            {
-                                if (markerList.source == 0)
-                                {
-                                    tex.SetPixels(s, 0, thickness, height, markerLine);
-                                }
-                                else
-                                {
-                                    tex.SetPixels(s, 0, thickness, height, markerLine2);
-                                }
-                            }
-                        }
-                        tex.Apply();
-                        // add it to audio indicator
-                        ai.markerTex.texture = tex;
+                    
+                Debug.Log("Add a marker");
+                // get texture from dict
+                var tex = markerTextures[markerList.id];
 
-                        // swap old id in marker list with new id so we can keep recording
-                        // because the main user will have the same id throughout the recording
-                        markerList.id = newId;
-                        break; // found it
+                float size = replayLength / width; // length the replay has on the texture
+                        
+                // draw markers
+                for (int m = 0; m < markerList.markers.Count; m+=2)
+                {
+                    var start = Mathf.RoundToInt((markerList.markers[m]) / size);
+                    var end = Mathf.RoundToInt((markerList.markers[m + 1]) / size);
+                    Debug.Log(start + " " + end);
+                    
+                    for (int s = start; s < end && s < width; s+=2) // thickness 
+                    {
+                        if (markerList.source == 0)
+                        {
+                            tex.SetPixels(s, 0, thickness, height, markerLine);
+                        }
+                        else
+                        {
+                            tex.SetPixels(s, 0, thickness, height, markerLine2);
+                        }
                     }
                 }
-                else
-                {
-                    Debug.Log("Key Not Found: Id might have been replaced already");
-                }
+                tex.Apply();
+                // add it to audio indicator
+                ai.markerTex.texture = tex;
+
+                // swap old id in marker list with new id so we can keep recording
+                // because the main user will have the same id throughout the recording
+                markerList.id = newId;
+                    
+            }
+            else
+            {
+                Debug.Log("Key Not Found: Id might have been replaced already");
             }
         }
         else
@@ -208,7 +188,6 @@ public class Marker : MonoBehaviour
             // make canvas of markers invisible for this avatar
             ai.markerTex.color = Color.clear;
         }
-      
     }
 
     [System.Serializable]
@@ -276,11 +255,11 @@ public class Marker : MonoBehaviour
     }
 
     // when recording finished and markers are saved clear the list
-    public void ClearCurrentAvatarMarkers()
+    public void Cleanup()
     {
         currentAvatarMarkers.markers.Clear();
         handGripMarkers.markers.Clear();
-        clipNrToOldIds.Clear();
+        clipNrToMarkerList.Clear();
     }
     public IEnumerator FadeTextToZeroAlpha(float t, Text i)
     {
