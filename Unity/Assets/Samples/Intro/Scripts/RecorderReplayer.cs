@@ -246,7 +246,7 @@ public class Recorder
         }
 
         // Clear variables
-        recRep.marker.ClearCurrentAvatarMarkers();
+        recRep.marker.Cleanup();
         OnRecordingStopped.Invoke(this, EventArgs.Empty);
         textures.Clear();
         recordedObjectIds.Clear();
@@ -643,6 +643,7 @@ public class Replayer
     {
         recRep.replayTimeInfo.text = "";
         OnReplayStopped.Invoke(this, EventArgs.Empty);
+        recRep.marker.Cleanup();
 
         //Debug.Log("Cleanup " + Time.unscaledTime);
         foreach (var i in oldNewIds)
