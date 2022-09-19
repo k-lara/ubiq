@@ -171,5 +171,23 @@ namespace RecorderReplayerTypes {
             this.pckgSizePerFrame = pckgSizePerFrame;
             this.idxFrameStart = idxFrameStart;
         }
+
+        //public RecordingInfo(RecordingInfo info)
+        //{
+        //    this.listLengths = info.listLengths;
+        //    this.frames = info.frames;
+        //    this.objectidsToClipNumber = info.objectidsToClipNumber;
+        //    this.clipNumber = info.clipNumber;
+        //    this.audioClipLengths = info.audioClipLengths;
+        //    this.numberOfObjects = info.numberOfObjects;
+        //    this.objectids = info.objectids;
+        //    this.textures = info.textures;
+        //    this.prefabs = info.prefabs;
+        //    this.markerLists = info.markerLists;
+        //    this.frameTimes = info.frameTimes;
+        //    this.pckgSizePerFrame = info.pckgSizePerFrame;
+        //    this.idxFrameStart = info.idxFrameStart;
+        //}
+
     }
 }
