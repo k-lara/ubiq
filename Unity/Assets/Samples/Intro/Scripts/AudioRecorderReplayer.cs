@@ -189,6 +189,12 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         }
 
     }
+
+    public FileStream GetAudioFileStream()
+    {
+        return audioFileStream;
+    }
+
     public Dictionary<short, int> GetLatencies()
     {
         return clipNumberToLatency;
@@ -661,7 +667,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         int clipPos; 
         byte[] pckgLength = new byte[4];
         byte[] clipNumber = new byte[2];
-        byte[] audioPckg = null;
+        byte[] audioPckg;
         AudioMessage audioMessage = new AudioMessage();
         //int test = 0;
         while (iter < iterations)
@@ -677,6 +683,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 
                 int l = BitConverter.ToInt32(pckgLength, 0) - 2; // pckgLength/2 = length samples
                 short s = BitConverter.ToInt16(clipNumber, 0);
+                //Debug.Log("checked original" + l + " " + s);
                 clipPos = audioClipPositions[s];
 
                 //Debug.Log("sizes: " + l + " " + s);

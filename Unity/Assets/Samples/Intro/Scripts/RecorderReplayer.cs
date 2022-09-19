@@ -309,6 +309,11 @@ public class Replayer
         recRep.menuRecRep.OnPointerUp += MenuRecRep_OnPointerUp;
     }
 
+    public FileStream GetReplayStream()
+    {
+        return streamFromFile;
+    }
+
     public void Replay(string replayFile)
     {
         if (!loadingStarted)
@@ -453,8 +458,20 @@ public class Replayer
             else
             { 
                 go = spawner.SpawnPersistentReplay(prefab, false, uid, true, new TransformMessage(recRep.thisTransform));
+                
+                if (go.TryGetComponent(out Avatar a))
+                {
+                    // add heart
+                    Transform trafo = go.transform.GetChild(0).GetChild(1);
+                    var heart = GameObject.Instantiate(recRep.avatarRemover.heartPrefab, trafo);
+                    var component = heart.GetComponent<Heart>();
+                    component.RenderInvisible();
+                    component.SetAvatar(a);
+                    heart.transform.position = new Vector3(heart.transform.position.x, -0.009f, 0.028f);
+                    recRep.avatarRemover.AddAvatar(go, component);
+                }   
             }
-            
+
             ReplayedObjectProperties props = new ReplayedObjectProperties();
             if (go.TryGetComponent(out ObjectHider objectHider))
             {
@@ -503,7 +520,8 @@ public class Replayer
         }
         else
         {
-            Debug.Log("Invalid replay file ID path!");
+            Debug.Log("Invalid replay file ID path!" + recRep.path + "/IDs" + replayFile + ".txt");
+            recRep.menuRecRep.ToggleReplay();
             recRep.replaying = false;
             loadingStarted = false;
 
@@ -554,16 +572,16 @@ public class Replayer
         return recInfo;
     }
 
-    private ReferenceCountedSceneGraphMessage[] CreateRCSGMs(MessagePack messagePack)
-    {
-        ReferenceCountedSceneGraphMessage[] rcsgms = new ReferenceCountedSceneGraphMessage[messagePack.messages.Count-1]; // first index is size
-        for (int i = 1; i < messagePack.messages.Count; i++) // start at index 1 bc 0 is size
-        {
-            byte[] msg = messagePack.messages[i];
-            rcsgms[i - 1] = CreateRCSGM(msg);
-        }
-        return rcsgms;
-    }
+    //private ReferenceCountedSceneGraphMessage[] CreateRCSGMs(MessagePack messagePack)
+    //{
+    //    ReferenceCountedSceneGraphMessage[] rcsgms = new ReferenceCountedSceneGraphMessage[messagePack.messages.Count-1]; // first index is size
+    //    for (int i = 1; i < messagePack.messages.Count; i++) // start at index 1 bc 0 is size
+    //    {
+    //        byte[] msg = messagePack.messages[i];
+    //        rcsgms[i - 1] = CreateRCSGM(msg);
+    //    }
+    //    return rcsgms;
+    //}
     // wouldn't it be nice to be able to skip a recorded message if something went wrong, so we just don't replay it
     private ReferenceCountedSceneGraphMessage CreateRCSGM(byte[] msg)
     {
@@ -644,6 +662,7 @@ public class Replayer
         recRep.replayTimeInfo.text = "";
         OnReplayStopped.Invoke(this, EventArgs.Empty);
         recRep.marker.Cleanup();
+        recRep.avatarRemover.Cleanup();
 
         //Debug.Log("Cleanup " + Time.unscaledTime);
         foreach (var i in oldNewIds)
@@ -699,6 +718,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
     public Text loadingInfoText; 
 
     [HideInInspector] public Marker marker; // markers to mark special events during a recording
+    [HideInInspector] public ReplayedAvatarRemover avatarRemover; // removes selected avatars from replay and creates new recording without them
 
     public string replayFile;
     [HideInInspector] public string recordFile = null;
@@ -766,7 +786,8 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
         aManager = scene.GetComponentInChildren<AvatarManager>();
         spawner = NetworkSpawner.FindNetworkSpawner(scene);
 
-        marker = GetComponent<Marker>(); 
+        marker = GetComponent<Marker>();
+        avatarRemover = GetComponent<ReplayedAvatarRemover>();
 
         // create Recorder and Replayer
         Debug.Log("Assign RecorderReplayer to Recorder and Replayer");
