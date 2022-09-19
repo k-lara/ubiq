@@ -128,7 +128,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         recRep.replayer.OnLoadingReplay += Replayer_OnLoadingReplay;
 
         GetReplayFilesFromDir();
-        AddReplayFiles();
+        AddReplayFiles(needsUpdate);
     }
     private void Replayer_OnLoadingReplay(object sender, RecorderReplayerTypes.RecordingInfo e)
     {
@@ -224,6 +224,7 @@ public class RecorderReplayerMenu : MonoBehaviour
                 foreach (var file in dir.EnumerateFiles("r*"))
                 {
                     recordings.Add(Path.GetFileNameWithoutExtension(file.Name));
+                    Debug.Log(file.Name);
                 }
             }
         }
@@ -232,7 +233,7 @@ public class RecorderReplayerMenu : MonoBehaviour
             Debug.LogError(e.ToString());
         }
     }
-    public void AddReplayFiles()
+    public void AddReplayFiles(bool needsUpdate)
     {
         if (!loaded)
         {
@@ -262,7 +263,7 @@ public class RecorderReplayerMenu : MonoBehaviour
             button.image.sprite = background;
             ColorBlock colors = button.colors;
             colors.normalColor = Color.clear;
-            colors.highlightedColor = new Color(0, 1, 0, 0.4f);
+            //colors.highlightedColor = new Color(0, 1, 0, 0.4f);
             colors.pressedColor = new Color(0.03f, 0.64f, 0.07f, 1.0f);
             colors.selectedColor = colors.pressedColor;
             button.colors = colors;
@@ -273,7 +274,9 @@ public class RecorderReplayerMenu : MonoBehaviour
             replayFileButtons.Add(button);
 
             Text t = go.GetComponentInChildren<Text>();
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
             t.text = file;
+
         }
     }
 
@@ -307,7 +310,7 @@ public class RecorderReplayerMenu : MonoBehaviour
                     EndReplayAndCleanup(); // just in case there could have been a replay going on too
                     EnableReplayFileSelection(true);
                 }
-                AddReplayFiles();
+                AddReplayFiles(needsUpdate);
             }
             else // start recording
             {
@@ -337,6 +340,11 @@ public class RecorderReplayerMenu : MonoBehaviour
 
         }
         
+    }
+
+    public void AddNewRecording(string newRecording)
+    {
+        newRecordings.Add(newRecording);
     }
 
     private void EndRecordingAndCleanup()
@@ -435,6 +443,11 @@ public class RecorderReplayerMenu : MonoBehaviour
             slider.interactable = false;
         }
 
+    }
+
+    public void PlayPauseButtonInteractable(bool isInteractable)
+    {
+        playPauseButton.interactable = isInteractable;
     }
 
     public void SetReplayFrame()
