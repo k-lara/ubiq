@@ -686,7 +686,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 //Debug.Log("checked original" + l + " " + s);
                 clipPos = audioClipPositions[s];
 
-                //Debug.Log("sizes: " + l + " " + s);
+                Debug.Log("sizes: " + l + " " + s);
                 audioPckg = new byte[l]; // contains audio data without bytes for short "uuid"
                 audioFileStream.Read(audioPckg, 0, audioPckg.Length);
                 //Debug.Log("stream position " + audioFileStream.Position);
