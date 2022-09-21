@@ -955,6 +955,11 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             audioFileStream.Dispose();
     }
 
+    private void OnDestroy()
+    {
+        ClearReplay();
+    }
+
     private enum MessageType
     {
         Create, // create the audio clips on all remote peers
