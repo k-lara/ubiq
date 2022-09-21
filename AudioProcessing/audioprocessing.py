@@ -135,28 +135,29 @@ def samples_to_bytes(clip_nr, data, num_packages, samples_per_package):
     for i in range(0,num_packages):
         start = i * samples_per_package
         end = (i + 1) * samples_per_package
+        print(start, end)
         pckg = data[start:end]
         bytes_pckg = pckg.tobytes()
-        bytes_size = np.array([len(bytes_pckg) + 2]).tobytes() # this includes the 2 byte clip nr too!
+        size = np.array([len(bytes_pckg) + 2])
+        bytes_size = size.tobytes() # this includes the 2 byte clip nr too!
+        print(int.from_bytes(bytes_size, 'little'))
         packages.append(bytes_size)
         packages.append(bytes_clipnr)
-        packages.append(pckg.tobytes())
-        print("byte size {}, clipnr {}".format(bytes_size, bytes_clipnr))
+        packages.append(bytes_pckg)
+        print("len pckg {}, clip nr {} byte size {}, clipnr {}".format(len(bytes_pckg) + 2, clip_nr, bytes_size, bytes_clipnr))
     
     current_index = num_packages * samples_per_package # data until now
     if (current_index < len(data)): # then we need to add a bit of rest data that didn't fit in the previous packages
         rest = data[current_index:]
-        bytes_pckg = pckg.tobytes()
+        bytes_pckg = rest.tobytes()
         bytes_size = np.array([len(bytes_pckg) + 2]).tobytes() # this includes the 2 byte clip nr too!
         packages.append(bytes_size)
         packages.append(bytes_clipnr)
         packages.append(bytes_pckg)
-        print("byte size {}, clipnr {}".format(bytes_size, bytes_clipnr))
+        print("LAST: len pckg {}, clip nr {} bytes {}, clipnr {}".format(len(bytes_pckg) + 2, clip_nr, bytes_size, bytes_clipnr))
     
-    byte_array = np.asarray(packages)
-    print(byte_array.shape)
-
-    return byte_array
+    bytes = b''.join(packages)
+    return bytes
     
 
 
