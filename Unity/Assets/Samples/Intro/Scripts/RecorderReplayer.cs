@@ -514,7 +514,10 @@ public class Replayer
 
             //Debug.Log(recInfo.frames + " " + recInfo.frameTimes.Count + " " + recInfo.pckgSizePerFrame.Count);
             objectsCreated = CreateRecordedObjects();
-            recRep.marker.SetReplayedMarkers(recInfo); // objects need to have been created 
+            if (recRep.experiment.mode == ReplayMode.Experiment)
+            {
+                recRep.marker.SetReplayedMarkers(recInfo); // objects need to have been created 
+            }
             recRep.audioRecRep.OnLoadingReplay(recInfo); // this also sets the audio indicators which need marker info already
             Debug.Log("Info loaded!");
         }
@@ -717,8 +720,10 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
     public UnityEngine.UI.Text replayTimeInfo; // for replays
     public Text loadingInfoText; 
 
+    // EXTRAS
     [HideInInspector] public Marker marker; // markers to mark special events during a recording
     [HideInInspector] public ReplayedAvatarRemover avatarRemover; // removes selected avatars from replay and creates new recording without them
+    [HideInInspector] public Experiment experiment;
 
     public string replayFile;
     [HideInInspector] public string recordFile = null;
@@ -788,6 +793,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
 
         marker = GetComponent<Marker>();
         avatarRemover = GetComponent<ReplayedAvatarRemover>();
+        experiment = GetComponent<Experiment>();
 
         // create Recorder and Replayer
         Debug.Log("Assign RecorderReplayer to Recorder and Replayer");

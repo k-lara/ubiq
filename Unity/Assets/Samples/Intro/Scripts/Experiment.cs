@@ -15,10 +15,17 @@ using System.IO;
 /// do different voice overs for the same recordings?
 /// </summary>
 ///
+
+public enum ReplayMode
+{
+    Experiment = 0,
+    Presentation = 1
+}
+
 public class Experiment : MonoBehaviour
 {
     public RecorderReplayer recRep;
-    
+    public ReplayMode mode;
     private string pathToRecordings;
     private List<Recording> recordings; 
 
@@ -34,7 +41,7 @@ public class Experiment : MonoBehaviour
     {
         
         recRep.menuRecRep.SelectReplayFile(recordings[replayNr].infoFileName);
-        recRep.menuRecRep.ToggleReplay(); // audio won't be loaded as it is no .dat file
+        recRep.menuRecRep.ToggleReplay();
     
     }
 

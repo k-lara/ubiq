@@ -603,8 +603,12 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         speechIndicator.SetReplayAudioSource(audioSource);
         speechIndicators.Add(clipNr, speechIndicator);
 
-        var ai = gameObject.GetComponentInChildren<AudioIndicator>();
         // for displaying waveforms
+        var ai = gameObject.GetComponentInChildren<AudioIndicator>();
+        if (recRep.experiment.mode == ReplayMode.Presentation)
+        {
+            ai.gameObject.transform.GetChild(0).gameObject.SetActive(false); // deactivate canvas game object to hide audio and marker info
+        }
         audioIndicators.Add(ai);
 
         audioSource.clip = AudioClip.Create(
@@ -622,9 +626,12 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         clipNumberToLatency.Add(clipNr, 0);
 
         //recRep.marker.CreateMarkerCanvas(id, ai, LATENCY);
-        recRep.marker.AddClipNumber(id, clipNr);
-        replayLength = recRep.marker.GetReplayLength();
-        frameTimes = recRep.marker.GetFrameTimes();
+        if (recRep.experiment.mode == ReplayMode.Experiment)
+        {
+            recRep.marker.AddClipNumber(id, clipNr);
+            replayLength = recRep.marker.GetReplayLength();
+            frameTimes = recRep.marker.GetFrameTimes();
+        }
     }
 
     private void CreateRemoteAudioClip(NetworkId id, short clipNr, int clipLength)
@@ -721,38 +728,37 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             startReadingFromFile = false;
             
             SetLatencies();
-
-            waveformTextures = new List<Texture2D>();
-            pointersToSamples = new List<Texture2D>();
-            pointersPackSize = new List<float>();
-            prevPointerPos = new int[replayedAudioSources.Count];
-
-            // add waveform to a canvas and show it to the user
-            int i = 0;
-            foreach (var item in replayedAudioSources)
-            {
-                Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-                Texture2D texTransparent = new Texture2D(width, height, TextureFormat.RGBA32, false);
-
-                var latency = clipNumberToLatency[item.Key];
-                Debug.Log("Waveform Latency: " + latency + " clip: " + item.Key);
-
-                SetTextureBackground(tex, texTransparent, Color.clear, width, height);
-                DrawWaveform(tex, texTransparent, item.Value.clip, latency,  width, height, playerCols[i%playerCols.Length]);
-                
-                // add finished texture to audioIndicators
-                audioIndicators[i].waveformTex.texture = waveformTextures[i];
-                audioIndicators[i].pointerTex.texture = pointersToSamples[i];
-
-                Debug.Log("replay lenghts, motion, audio, samples/sec: " + replayLength + " " + item.Value.clip.length + " " +  item.Value.clip.samples/item.Value.clip.length);
-                recRep.marker.CreateMarkerCanvas(item.Key, audioIndicators[i]);
-                                
-                i++;
-                
-            }
-
-           
             
+            if (recRep.experiment.mode == ReplayMode.Experiment)
+            {
+                waveformTextures = new List<Texture2D>();
+                pointersToSamples = new List<Texture2D>();
+                pointersPackSize = new List<float>();
+                prevPointerPos = new int[replayedAudioSources.Count];
+
+                // add waveform to a canvas and show it to the user
+                int i = 0;
+                foreach (var item in replayedAudioSources)
+                {
+                    Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                    Texture2D texTransparent = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+                    var latency = clipNumberToLatency[item.Key];
+                    Debug.Log("Waveform Latency: " + latency + " clip: " + item.Key);
+
+                    SetTextureBackground(tex, texTransparent, Color.clear, width, height);
+                    DrawWaveform(tex, texTransparent, item.Value.clip, latency,  width, height, playerCols[i%playerCols.Length]);
+                
+                    // add finished texture to audioIndicators
+                    audioIndicators[i].waveformTex.texture = waveformTextures[i];
+                    audioIndicators[i].pointerTex.texture = pointersToSamples[i];
+
+                    Debug.Log("replay lenghts, motion, audio, samples/sec: " + replayLength + " " + item.Value.clip.length + " " +  item.Value.clip.samples/item.Value.clip.length);
+                    recRep.marker.CreateMarkerCanvas(item.Key, audioIndicators[i]);
+                                
+                    i++;
+                }
+            }
         }
         return audioMessage;
         //testStreamWriterReplay.Dispose();
@@ -790,14 +796,15 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         int s = 0;
 
         for (float i = 0; Mathf.RoundToInt(i) < samples.Length && s < waveform.Length; i+=packSize)
-        {
+        {     
             waveform[s] = Mathf.Abs(samples[Mathf.RoundToInt(i)]);
             s++;
         }
 
         for (int x = 0; x < waveform.Length; x++)
         {
-            for (int y = 0; y <= waveform[x] * ((float)height * 10); y++)
+            //Debug.Log(waveform[x] + " " + (float)height * 0.75f +  " " + (float)height);
+            for (int y = 0; y <= waveform[x] * ((float)height * 8); y++)
             {
                 tex.SetPixel(x, (height / 2) + y, col);
                 tex.SetPixel(x, (height / 2) - y, col);
@@ -862,16 +869,18 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                     SendAudioMessage(new AudioMessage() { messageId = 6, timeSamples = currentTimeSamplesPerClip});
                 }
 
-
-                // when replay is playing draw a line on the audio texture for the current position
-                if (recRep.replaying && recRep.play && audioDataAvailable && !startReadingFromFile)
+                if (recRep.experiment.mode == ReplayMode.Experiment)
                 {
-                    var i = 0;
-                    foreach (var item in replayedAudioSources)
+                    // when replay is playing draw a line on the audio texture for the current position
+                    if (recRep.replaying && recRep.play && audioDataAvailable && !startReadingFromFile)
                     {
-                        var latency = clipNumberToLatency[item.Key];
-                        DrawPointerOnWaveform(i, item.Value, width, height, latency);
-                        i++;
+                        var i = 0;
+                        foreach (var item in replayedAudioSources)
+                        {
+                            var latency = clipNumberToLatency[item.Key];
+                            DrawPointerOnWaveform(i, item.Value, width, height, latency);
+                            i++;
+                        }
                     }
                 }
             }

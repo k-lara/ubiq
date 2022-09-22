@@ -15,7 +15,7 @@ def to_wav(files):
     for file in files:
         
         filename = os.path.basename(file).split('.')[0]
-
+        print(filename)
         clips = {0 : [], 1 : [], 2 : [], 3 : [], 4 : [], 5 : [], 6 : []}
         f = open(file, "rb")
         print(file)
@@ -68,7 +68,7 @@ def to_wav(files):
                 data = np.asarray(clips[key])
                 print("Write clip {} to .wav file".format(key))
                 path = os.path.join(wav_folder, filename + "_{}.wav".format(key))
-                write(path, 16000, data.astype(np.float32))
+                write(path, 16000, data.astype(np.int16))
 
 def organize_downloaded(files):
 
@@ -191,8 +191,8 @@ if __name__ == "__main__":
 
     # to_wav(files)
 
-    # mp3s = glob.glob(downloaded + "/audiorec*")
 
+    # mp3s = glob.glob(downloaded + "/audiorec*")
     # organize_downloaded(mp3s)
 
     wav_to_raw_data(mp3_to_wav_folder)

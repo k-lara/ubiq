@@ -638,7 +638,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: -10.917978, y: 95.00002}
+  m_AnchoredPosition: {x: -10.917978, y: 94.99996}
   m_SizeDelta: {x: 220, y: 1826.4}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &45832335
@@ -11647,6 +11647,20 @@ MonoBehaviour:
   infoText: {fileID: 1222453688}
   heartPrefab: {fileID: 4680247437241842675, guid: 00cb0b8ae51fc694c87c6af127c3b12a,
     type: 3}
+--- !u!114 &1109945947
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1109945943}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad1d6988fac7bfb4d8adcc7d65847284, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  recRep: {fileID: 1109945945}
+  mode: 1
 --- !u!1001 &1111900627
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -26586,7 +26600,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 874390025}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.10402978
+  m_Size: 0.10401321
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
