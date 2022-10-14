@@ -98,7 +98,7 @@ public class ObjectHider : MonoBehaviour, INetworkComponent, ILayer
 
         objectid = context.networkObject.Id;
         spawnableObject = GetComponent<ISpawnable>();
-        spawner = NetworkSpawner.FindNetworkSpawner(context.scene);
+        spawner = NetworkSpawner.FindNetworkSpawner(scene);
 
         roomClient.OnPeerAdded.AddListener(OnPeerAdded);
     }

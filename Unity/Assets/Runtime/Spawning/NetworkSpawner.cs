@@ -240,6 +240,7 @@ namespace Ubiq.Spawning
                     Destroy(spawned[networkId]); // object is destroyed after the current update loop
                     // send a hide message so the recording knows when the object should be invisible
                     //ObjectHider objectHider;
+                    Debug.Log("Destroy object: " + spawned[networkId].name);
                     if (spawned[networkId].TryGetComponent<ObjectHider>(out ObjectHider objectHider))
                     {
                         objectHider.SetNetworkedObjectLayer(8);
