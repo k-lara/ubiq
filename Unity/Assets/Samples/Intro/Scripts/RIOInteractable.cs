@@ -12,7 +12,7 @@ public class RIOInteractable : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        if (avatar.IsLocal)
+        if (avatar.IsLocal && avatar.Peer != null)
         {
             boxCollider.isTrigger = false;
            

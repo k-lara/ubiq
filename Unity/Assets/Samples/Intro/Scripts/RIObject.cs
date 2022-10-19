@@ -5,6 +5,7 @@ using Ubiq.Messaging;
 using Ubiq.XR;
 using Ubiq.Avatars;
 using Avatar = Ubiq.Avatars.Avatar;
+using Ubiq.Rooms;
 
 // Recordable Interactable Object: An object that can be interacted with over multiple replays
 // exemplary PROCESS:
@@ -25,20 +26,23 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
     private Vector3 prevPosition;
     private Quaternion prevRotation;
 
+    private RoomClient roomClient;
     // grabbing
     private Vector3 localGrabPoint;
     private Quaternion localGrabRotation;
     private Transform handTransform; // controller transform of hand that has grabbed the object
     private bool isGrabbed; // grabbed by one avatar
     private bool isGrabbed2; // grabbed by the other avatar
+    private NetworkId currentGrabberId =  new NetworkId(0); // id of the avatar that is currently grabbing the object
+    private NetworkId zeroId = new NetworkId(0);
     private bool startingPoseSet = false;
 
     private Rigidbody rb;
 
-    private Avatar avatar;
     public AvatarManager avatarManager;
 
     private RecorderReplayer recRep;
+
 
     public NetworkId Id { get; } = new NetworkId("abc27356-d81e8f59");
 
@@ -47,27 +51,32 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
         public TransformMessage transform;
         public bool isGrabbed2;
         public bool isKinematic;
-        public Message(Transform transform, bool isGrabbed2, bool isKinematic)
+        public NetworkId grabberId;
+
+        public Message(Transform transform, bool isGrabbed2, bool isKinematic, NetworkId grabberId)
         {
             this.transform = new TransformMessage(transform);
             this.isGrabbed2 = isGrabbed2;
             this.isKinematic = isKinematic;
+            this.grabberId = grabberId;
         }
     }
 
 
     public void Grasp(Hand controller)
     {
-        //if (!isGrabbed)
+        Debug.Log("Live: Let's grab the object");
+        handTransform = controller.transform;
+        // transforms obj position and rotation from world space into local hand controller space
+        localGrabPoint = handTransform.InverseTransformPoint(transform.position);
+        localGrabRotation = Quaternion.Inverse(handTransform.rotation) * transform.rotation;
+        isGrabbed = true;
+        //isGrabbed2 = false;
+        rb.isKinematic = true;
+        if (recRep.experiment.mode == ReplayMode.MultiUser)
         {
-            Debug.Log("Live: Let's grab the object");
-            handTransform = controller.transform;
-            // transforms obj position and rotation from world space into local hand controller space
-            localGrabPoint = handTransform.InverseTransformPoint(transform.position);
-            localGrabRotation = Quaternion.Inverse(handTransform.rotation) * transform.rotation;
-            isGrabbed = true;
-            isGrabbed2 = false;
-            rb.isKinematic = true;
+            currentGrabberId = avatarManager.LocalAvatar.Id;
+            context.SendJson(new Message(transform, isGrabbed, rb.isKinematic, currentGrabberId));
         }
     }
 
@@ -82,6 +91,7 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
         isGrabbed2 = false;
         rb.isKinematic = true;
     }
+    // for single user 
     public void ForceRelease()
     {
         Debug.Log("force release");
@@ -89,19 +99,20 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
         rb.isKinematic = false;
         isGrabbed = false;
         isGrabbed2 = false;
-        context.SendJson(new Message(transform, isGrabbed2, rb.isKinematic));
+        context.SendJson(new Message(transform, isGrabbed2, rb.isKinematic, zeroId));
 
     }
 
     public void Release(Hand controller)
     {
-        if (isGrabbed)
+        if (isGrabbed) // for handing it between left and right hand (&& handTransform.Equals(controller.transform))
         {
             Debug.Log("release");
             handTransform = null;
             rb.isKinematic = false;
             isGrabbed = false;
-            context.SendJson(new Message(transform, isGrabbed, rb.isKinematic));
+            context.SendJson(new Message(transform, isGrabbed, rb.isKinematic, avatarManager.LocalAvatar.Id));
+            currentGrabberId = zeroId;
 
         }
 
@@ -112,112 +123,156 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
     {
         if (context == null) context = NetworkScene.Register(this);
         scene = NetworkScene.FindNetworkScene(this);
-        //avatar = avatarManager.LocalAvatar;
+        roomClient = scene.GetComponent<RoomClient>();
         recRep = scene.GetComponentInChildren<RecorderReplayer>();
         rb = GetComponent<Rigidbody>();
         rb.drag = 0.5f;
         rb.mass = 0.5f;
-        rb.isKinematic = false; 
+        rb.isKinematic = false;
+
+        //prevPosition = transform.position;
+        //prevRotation = transform.rotation;
     }
 
-    // not to self: need the position of the object because the replayed avatar
+    // note to self: need the position of the object because the replayed avatar
     // does not have a hand controller transform
     // Update is called once per frame
     void Update()
     {
+        // isGrabbed = True follow whoever grabbed the object
         if (handTransform != null) // object has been grabbed, isKinematic = true
         {
             //Debug.Log("hand transform");
             transform.position = handTransform.TransformPoint(localGrabPoint);
             transform.rotation = handTransform.rotation * localGrabRotation;           
+            
         }
-
-        //if (handAnim != null) // some recorded avatar is grabbing the object for the at least second time
-        //{
-
-        //    Debug.Log("Hand anim doing stuff");
-        //    (var left, var right) = handAnim.GetGripTargets();
-
-        //    if (right < 0.8 || left < 0.8)
-        //    {
-        //        ForceRelease();
-        //        handAnim = null;
-        //        collider = null;
-        //    }
-        //    else
-        //    {
-        //        Debug.Log("HandAnim grasp: " + left + " " + right);
-        //        if (right > 0.8 || left > 0.8)
-        //        {
-        //            // "grasp" the object
-        //            // if held by live user: release
-        //            if (!isGrabbed && !isGrabbed2)
-        //            {
-        //                ForceRelease();
-        //                RecordedGrasp(collider.transform);
-        //            }
-        //        }
-        //    }
-        //}
-        if (scene.recorder != null && scene.recorder.IsRecording())
+        if (recRep.experiment.mode == ReplayMode.SingleUser)
         {
-            // record/send initial position of GO once and any other grabbed transforms when they change
-            // handles: initial pos/rot of object and while grabbed
-            if (transform.position != prevPosition || transform.rotation != prevRotation)
+            if (recRep.recording) // this is only true for the user who is the creator and able to record
+            //if (scene.recorder != null && scene.recorder.IsRecording()) // this can be true for everyone
             {
-                //Debug.Log("transform changed");
-                if (!startingPoseSet) // do this once
+                // record/send initial position of GO once and any other grabbed transforms when they change
+                // handles: initial pos/rot of object and while grabbed
+                if (transform.position != prevPosition || transform.rotation != prevRotation)
                 {
-                    context.SendJson(new Message(transform, isGrabbed, rb.isKinematic));
-                    prevPosition = transform.position;
-                    prevRotation = transform.rotation;
-                    startingPoseSet = true;
+                    //Debug.Log("transform changed");
+                    if (!startingPoseSet) // do this once
+                    {
+                        Debug.Log("Set starting pos!");
+                        context.SendJson(new Message(transform, isGrabbed, rb.isKinematic, zeroId));
+                        prevPosition = transform.position;
+                        prevRotation = transform.rotation;
+                        startingPoseSet = true;
+                    }
+                    //Debug.Log("is grabbed");
+                    if (isGrabbed || isGrabbed2) // for 2 user case isGrabbed2 means that remote user has grabbed it
+                    {
+                        context.SendJson(new Message(transform, true, rb.isKinematic, zeroId));
+                        prevPosition = transform.position;
+                        prevRotation = transform.rotation;
+                    }
+                    // if not kinematic it won't be recorded
                 }
-                //Debug.Log("is grabbed");
-                if (isGrabbed || isGrabbed2) 
-                {
-                    context.SendJson(new Message(transform, true, rb.isKinematic));
-                    prevPosition = transform.position;
-                    prevRotation = transform.rotation;
-                }
-                // if not kinematic it won't be recorded
+
+            }
+            else
+            { 
+                startingPoseSet = false;
+                prevPosition = Vector3.zero;      
+            }     
+        }
+        // in multi user mode we also need to send the position of the object when we are not recording
+        else if (recRep.experiment.mode == ReplayMode.MultiUser)
+        {
+            if (isGrabbed && currentGrabberId.Equals(avatarManager.LocalAvatar.Id)) // if not grabbed we rely on physics and hope this will be ok
+            {
+                context.SendJson(new Message(transform, isGrabbed, rb.isKinematic, zeroId));   // only send actual id when grabbing first time or releasing
             }
 
-        }
-        else
-        {
-            //if (!recRep.replaying)
+            if (recRep.recording)
+            {
+                if (transform.position != prevPosition)
+                {
+                    if (!startingPoseSet)
+                    {
+                        Debug.Log("Set starting pos!");
+                        context.SendJson(new Message(transform, isGrabbed, rb.isKinematic, zeroId));
+                        prevPosition = transform.position;
+                        prevRotation = transform.rotation;
+                        startingPoseSet = true;
+                    }
+                }
+            }
+            else
             {
                 startingPoseSet = false;
                 prevPosition = Vector3.zero;
-                // just reset position, don't worry about rotation
-                //avatars.Clear();
-                //colliders.Clear();
-                //handAnim = null;
             }
         }
-        
     }
 
+    // whoever is grabbing the object sends the message that gets received here by all other peers
     public void ProcessMessage(ReferenceCountedSceneGraphMessage message)
     {
-        // if it is already grabbed before an incoming message that might set isGrabbed2 = false
-        // then isGrabbed stays true and needs to be set false some other way!!!
-        if (!isGrabbed) // if it is not grabbed by current live avatar to avoid flickering between positions
+        // in case of 2 users: 
+        // isGrabbed: local, isGrabbed2: remote
+
+        // in multi user mode, the person who takes an object from the current owner takes priority over ownership
+        if (recRep.experiment.mode == ReplayMode.MultiUser)
         {
-            //Debug.Log("Process Message RIO");
             var msg = message.FromJson<Message>();
-            transform.localPosition = msg.transform.position;
-            transform.localRotation = msg.transform.rotation;
-            isGrabbed2 = msg.isGrabbed2;
-            rb.isKinematic = msg.isKinematic;
+
+            if (!msg.grabberId.Equals(zeroId))
+            {
+                if (msg.isGrabbed2)
+                {
+                    currentGrabberId = msg.grabberId;
+
+                    if (isGrabbed)
+                    {
+                        isGrabbed = false;
+                        handTransform = null;
+                    }
+                }
+                else // released
+                {
+                    currentGrabberId = zeroId;
+                }
+                isGrabbed2 = msg.isGrabbed2;
+                rb.isKinematic = msg.isKinematic;
+            }
+            if (!isGrabbed)
+            {
+                transform.localPosition = msg.transform.position;
+                transform.localRotation = msg.transform.rotation;
+            }
+            
+       
+
         }
         else
         {
-            isGrabbed2 = false;
+            // if it is already grabbed before an incoming message that might set isGrabbed2 = false
+            // then isGrabbed2 stays true and needs to be set false some other way!!!
+            if (!isGrabbed) // if it is not grabbed by current live avatar to avoid flickering between positions
+            {
+                //Debug.Log("Process Message RIO");
+                var msg = message.FromJson<Message>();
+                transform.localPosition = msg.transform.position;
+                transform.localRotation = msg.transform.rotation;
+                isGrabbed2 = msg.isGrabbed2;
+                rb.isKinematic = msg.isKinematic;
+            }
+            else
+            {
+                isGrabbed2 = false;
+            }
         }
     }
 
+    // this only gets triggered by replayed avatars as their colliders are turned on
+    // not for live avatars, their colliders are turned off (script: RIOInteractable)
     private RIOInteractable rioI;
     private void OnTriggerStay(Collider other)
     {
@@ -252,24 +307,7 @@ public class RIObject : MonoBehaviour, IGraspable, INetworkObject, INetworkCompo
                     ForceRelease();
                 }
             }
-
         }
     }
-
-    //private void OnTriggerEnter(Collider other)
-    //{
-    //    if (other.gameObject.tag == "TriggerRIO")
-    //    {
-    //        if (other.transform.parent.parent.parent.parent.TryGetComponent(out handAnim))
-    //        {
-    //            Debug.Log("got hand anim");
-
-    //            if (!handAnim.avatar.IsLocal)
-    //            {
-    //                collider = other;
-    //            }
-    //        }
-    //    }
-
-    //}
 }
+   
