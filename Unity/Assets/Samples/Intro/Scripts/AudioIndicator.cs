@@ -19,10 +19,10 @@ public class AudioIndicator : MonoBehaviour
     {
         // find player camera
         mainCamera = Camera.main;
-        if (avatar.IsLocal)
-        {
-            canvas.gameObject.SetActive(false);
-        }
+        canvas.gameObject.SetActive(false); // gets enabled when audio clips are created
+        //if (avatar.IsLocal)
+        //{
+        //}
     }
 
     // Update is called once per frame

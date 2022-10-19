@@ -605,9 +605,15 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 
         // for displaying waveforms
         var ai = gameObject.GetComponentInChildren<AudioIndicator>();
-        if (recRep.experiment.mode == ReplayMode.Presentation)
+        
+        // do not show audio indicators and markers in presentation mode
+        if (recRep.experiment.mode != ReplayMode.SingleUser)
         {
             ai.gameObject.transform.GetChild(0).gameObject.SetActive(false); // deactivate canvas game object to hide audio and marker info
+        }
+        else
+        {
+            ai.gameObject.transform.GetChild(0).gameObject.SetActive(true);
         }
         audioIndicators.Add(ai);
 
@@ -626,7 +632,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         clipNumberToLatency.Add(clipNr, 0);
 
         //recRep.marker.CreateMarkerCanvas(id, ai, LATENCY);
-        if (recRep.experiment.mode == ReplayMode.Experiment)
+        if (recRep.experiment.mode == ReplayMode.SingleUser)
         {
             recRep.marker.AddClipNumber(id, clipNr);
             replayLength = recRep.marker.GetReplayLength();
@@ -728,8 +734,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             startReadingFromFile = false;
             
             SetLatencies();
-            
-            if (recRep.experiment.mode == ReplayMode.Experiment)
+            // in experiment mode show all the audio indicators and markers
+            if (recRep.experiment.mode == ReplayMode.SingleUser)
             {
                 waveformTextures = new List<Texture2D>();
                 pointersToSamples = new List<Texture2D>();
@@ -869,7 +875,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                     SendAudioMessage(new AudioMessage() { messageId = 6, timeSamples = currentTimeSamplesPerClip});
                 }
 
-                if (recRep.experiment.mode == ReplayMode.Experiment)
+                // only draw pointer on audio indicator in experiment mode
+                if (recRep.experiment.mode == ReplayMode.SingleUser)
                 {
                     // when replay is playing draw a line on the audio texture for the current position
                     if (recRep.replaying && recRep.play && audioDataAvailable && !startReadingFromFile)

@@ -35,14 +35,14 @@ public class Marker : MonoBehaviour
 
     private NetworkId localAvatarId;
 
-    private List<AvatarMarkers> replayedMarkers;
     private float replayLength;
     private List<float> frameTimes;
     private NetworkSpawner spawner;
-    private Dictionary<short, AvatarMarkers> clipNrToMarkerList;
 
     // markers indicate the begin and end of a marked region
     // two consecutive float time stamps always belong together, the first giving the start and the second giving the end of the marked region
+    private Dictionary<short, AvatarMarkers> clipNrToMarkerList;
+    private List<AvatarMarkers> replayedMarkers;
     private AvatarMarkers currentAvatarMarkers;
     private AvatarMarkers handGripMarkers;
 
@@ -216,50 +216,66 @@ public class Marker : MonoBehaviour
 
     public void MarkControllerGrip(bool isGripped)
     {
-        if (recRep.recording)
+
+        if (recRep.roomClient.Me["creator"] == "1")
         {
-            var t = Time.unscaledTime - recRep.recorder.GetRecordingStartTime();
-            if (isGripped)
+            if (recRep.recording)
             {
-                Debug.Log("GRIP START: " + t);
-                info.text = "Marking Grip...";
+                var t = Time.unscaledTime - recRep.recorder.GetRecordingStartTime();
+                if (isGripped)
+                {
+                    Debug.Log("GRIP START: " + t);
+                    info.text = "Marking Grip...";
+                }
+                else
+                {
+                    Debug.Log("GRIP END: " + t);
+                    info.text = "";
+                }
+                // only save markers when we are actually recording something
+                handGripMarkers.markers.Add(t);
             }
-            else
-            {
-                Debug.Log("GRIP END: " + t);
-                info.text = "";
-            }
-            // only save markers when we are actually recording something
-            handGripMarkers.markers.Add(t);
+        }
+        else
+        {
+            Debug.Log("Cannot mark controller grip because creator = " + recRep.roomClient.Me["creator"]);
         }
     }
 
     public void MarkData(bool buttonPress)
     {
-        if (recRep.recording)
+        if (recRep.roomClient.Me["creator"] == "1")
         {
-            var t = Time.unscaledTime - recRep.recorder.GetRecordingStartTime();
-            if (buttonPress)
+            if (recRep.recording)
             {
-                Debug.Log("MARK START: " + t);
-                info.text = "Marking...";
+                var t = Time.unscaledTime - recRep.recorder.GetRecordingStartTime();
+                if (buttonPress)
+                {
+                    Debug.Log("MARK START: " + t);
+                    info.text = "Marking...";
+                }
+                else
+                {
+                    Debug.Log("MARK END: " + t);
+                    info.text = "";
+                }
+                // only save markers when we are actually recording something
+                currentAvatarMarkers.markers.Add(t);
             }
-            else
-            {
-                Debug.Log("MARK END: " + t);
-                info.text = "";
-            }
-            // only save markers when we are actually recording something
-            currentAvatarMarkers.markers.Add(t);
+        }
+        else
+        {
+            Debug.Log("Cannot mark data because creator = " + recRep.roomClient.Me["creator"]);
         }
     }
 
     // when recording finished and markers are saved clear the list
     public void Cleanup()
     {
-        currentAvatarMarkers.markers.Clear();
-        handGripMarkers.markers.Clear();
-        clipNrToMarkerList.Clear();
+        if (currentAvatarMarkers != null) currentAvatarMarkers.markers.Clear();
+        if (handGripMarkers != null) handGripMarkers.markers.Clear();
+        if (clipNrToMarkerList != null) clipNrToMarkerList.Clear();
+        if (replayedMarkers != null) replayedMarkers.Clear();
     }
     public IEnumerator FadeTextToZeroAlpha(float t, Text i)
     {

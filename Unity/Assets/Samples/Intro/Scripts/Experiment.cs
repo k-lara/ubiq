@@ -16,10 +16,12 @@ using System.IO;
 /// </summary>
 ///
 
+// overall settings for experiment either single or multi user or actual study (presentation) view
 public enum ReplayMode
 {
-    Experiment = 0,
-    Presentation = 1
+    Presentation = 0, // hide audio indicators and markers
+    SingleUser = 1, // single user mode (with audio indicators)
+    MultiUser = 2,
 }
 
 public class Experiment : MonoBehaviour

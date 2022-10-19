@@ -141,6 +141,7 @@ public class Recorder
                 if (!textures.ContainsKey(message.objectid))
                 {
                     textures.Add(message.objectid, uid);
+                    Debug.Log("Texture uid: " +  uid);
                 }
             }
             else
@@ -220,6 +221,7 @@ public class Recorder
                     markerLists,
                     frameTimes, pckgSizePerFrame, idxFrameStart), true));
                 Debug.Log("Recording info saved");
+                recRep.marker.Cleanup(); // i am not entirely sure if it is necessary here
             }
 
         }
@@ -514,7 +516,9 @@ public class Replayer
 
             //Debug.Log(recInfo.frames + " " + recInfo.frameTimes.Count + " " + recInfo.pckgSizePerFrame.Count);
             objectsCreated = CreateRecordedObjects();
-            if (recRep.experiment.mode == ReplayMode.Experiment)
+
+            // only draw texture for markers when in experiment mode
+            if (recRep.experiment.mode == ReplayMode.SingleUser)
             {
                 recRep.marker.SetReplayedMarkers(recInfo); // objects need to have been created 
             }
@@ -718,7 +722,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
 
     public UnityEngine.UI.Text timeInfo; // for recordings
     public UnityEngine.UI.Text replayTimeInfo; // for replays
-    public Text loadingInfoText; 
+    public Text loadingInfoText;
 
     // EXTRAS
     [HideInInspector] public Marker marker; // markers to mark special events during a recording
@@ -740,7 +744,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
     [HideInInspector] public Transform thisTransform;
 
     [HideInInspector] public bool leftRoom = false;
-    private RoomClient roomClient;
+    [HideInInspector] public RoomClient roomClient;
     [HideInInspector] public Recorder recorder;
     [HideInInspector] public Replayer replayer;
     [HideInInspector] public bool recordingAvailable = false;
@@ -825,25 +829,32 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
     }
     public void OnJoinedRoom(IRoom room)
     {
-        Debug.Log("Disable creator for now and let me always be creator");
-        roomClient.Me["creator"] = "1";
-        // uncomment when needed again!!!!
-        //Debug.Log("OnJoinedRoom RecorderReplayer");
-        //if (roomClient.Peers.Count() == 0)
-        //{
-        //    Debug.Log("No peers in room, make me creator");
-        //    roomClient.Me["creator"] = "1";
-        //}
-        //else if (roomClient.Peers.Count() == 1) // this one has to be the creator so if they leave let me become creator
-        //{
-        //    Debug.Log("Creator in the room, let me become successor");
-        //    roomClient.Me["creator"] = "2";
-        //}
-        //else
-        //{
-        //    Debug.Log(roomClient.Peers.Count() + "other peer(s) in the room, someone else is creator");
-        //    roomClient.Me["creator"] = "0";
-        //}
+        //Debug.Log("Disable creator for now and let me always be creator");
+        if (experiment.mode == ReplayMode.SingleUser)
+        {
+            Debug.Log("Single User: be creator");
+            roomClient.Me["creator"] = "1";
+        }
+        else if (experiment.mode == ReplayMode.MultiUser)
+        {
+            Debug.Log("OnJoinedRoom RecorderReplayer");
+            if (roomClient.Peers.Count() == 0)
+            {
+                Debug.Log("No peers in room, make me creator");
+                roomClient.Me["creator"] = "1";
+            }
+            else if (roomClient.Peers.Count() == 1) // this one has to be the creator so if they leave let me become creator
+            {
+                Debug.Log("Creator in the room, let me become successor");
+                roomClient.Me["creator"] = "2";
+            }
+            else
+            {
+                Debug.Log(roomClient.Peers.Count() + "other peer(s) in the room, someone else is creator");
+                roomClient.Me["creator"] = "0";
+            }
+        }
+
     }
 
     // if previous authority gets discoonected make sure that recording is stopped when authority is given to the next peer
