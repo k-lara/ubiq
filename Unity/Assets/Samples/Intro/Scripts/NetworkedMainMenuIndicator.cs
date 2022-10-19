@@ -79,26 +79,28 @@ namespace Ubiq.Samples
             }
         }
 
-        public void Update()
-        {
-            if (mainMenu != null)
-            {
-                // Only send update if UI is opened locally
-                // Or UI was just closed, in which case notify remotes
-                if (state[0].opened || notify)
-                {
-                    // Update state from menu
-                    state[0].position = mainMenu.transform.position;
-                    state[0].rotation = mainMenu.transform.rotation;
+        // NOTE: I disabled the menu indicator visibility messages
+        // because I don't need the indicator for my recording pruposes for now
+        //public void Update()
+        //{
+        //    if (mainMenu != null)
+        //    {
+        //        // Only send update if UI is opened locally
+        //        // Or UI was just closed, in which case notify remotes
+        //        if (state[0].opened || notify)
+        //        {
+        //            // Update state from menu
+        //            state[0].position = mainMenu.transform.position;
+        //            state[0].rotation = mainMenu.transform.rotation;
 
-                    // Send it through network
-                    Send();
+        //            // Send it through network
+        //            Send();
 
-                    // No longer need to notify
-                    notify = false;
-                }
-            }
-        }
+        //            // No longer need to notify
+        //            notify = false;
+        //        }
+        //    }
+        //}
 
         private void Send()
         {
