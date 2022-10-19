@@ -159,8 +159,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22b5e06a2aec95844b28a259f46c40f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Textures: {fileID: 11400000, guid: 711a32cdfac3cd644a666f4575bf6f22, type: 2}
-  RandomTextureOnSpawn: 0
+  Textures: {fileID: 11400000, guid: 0ac23fdaee99c4540b1ef56faa9df5b5, type: 2}
+  RandomTextureOnSpawn: 1
   SaveTextureSetting: 0
   OnTextureChanged:
     m_PersistentCalls:

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: beda9fe37c678d84b94f58ffae294549, type: 3}
+  m_Name: Reduced Floating Textures
+  m_EditorClassIdentifier: 
+  Textures:
+  - {fileID: 2800000, guid: 9560f535327f6bc448640de6d8983dc3, type: 3}
+  - {fileID: 2800000, guid: fcc13f30d9de5c84c88902f67fe89820, type: 3}
+  - {fileID: 2800000, guid: c88d7fe51f0013448976b620274be6c3, type: 3}
+  - {fileID: 2800000, guid: dd28c28f1dc116f40844fcda77a61f15, type: 3}
+  - {fileID: 2800000, guid: e9969945f06df8245abcffb773a8d794, type: 3}
+  - {fileID: 2800000, guid: 6052fa5db3bd5f340a2e3c2a6417a109, type: 3}
