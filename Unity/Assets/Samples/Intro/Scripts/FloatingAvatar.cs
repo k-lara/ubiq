@@ -102,44 +102,49 @@ namespace Ubiq.Samples
 
         private void UpdateVisibility()
         {
-            if (avatar.IsLocal)
-            {
-                //if(renderToggle != null && renderToggle.rendering)
-                {
-                    headRenderer.enabled = false;
-                    torsoRenderer.enabled = true;
-                    leftHandRenderer.enabled = true;
-                    rightHandRenderer.enabled = true;
-                }
-                //else
-                //{
-                //    headRenderer.enabled = false;
-                //    torsoRenderer.enabled = false;
-                //    leftHandRenderer.enabled = false;
-                //    rightHandRenderer.enabled = false;
-                //}
+            headRenderer.enabled = true;
+            torsoRenderer.enabled = true;
+            leftHandRenderer.enabled = true;
+            rightHandRenderer.enabled = true;
 
-                //renderToggle.Send();
-            }
-            else
-            {
-                //if (renderToggle != null && renderToggle.rendering)
-                {
-                    headRenderer.enabled = true;
-                    torsoRenderer.enabled = true;
-                    leftHandRenderer.enabled = true;
-                    rightHandRenderer.enabled = true;
+            //if (avatar.IsLocal)
+            //{
+            //    //if(renderToggle != null && renderToggle.rendering)
+            //    {
+            //        headRenderer.enabled = false;
+            //        torsoRenderer.enabled = true;
+            //        leftHandRenderer.enabled = true;
+            //        rightHandRenderer.enabled = true;
+            //    }
+            //    //else
+            //    //{
+            //    //    headRenderer.enabled = false;
+            //    //    torsoRenderer.enabled = false;
+            //    //    leftHandRenderer.enabled = false;
+            //    //    rightHandRenderer.enabled = false;
+            //    //}
 
-                }
-                //else
-                //{
-                //    headRenderer.enabled = false;
-                //    torsoRenderer.enabled = false;
-                //    leftHandRenderer.enabled = false;
-                //    rightHandRenderer.enabled = false;
-                //}
-            }
-            //renderToggle.Send();
+            //    //renderToggle.Send();
+            //}
+            //else
+            //{
+            //    //if (renderToggle != null && renderToggle.rendering)
+            //    {
+            //        headRenderer.enabled = true;
+            //        torsoRenderer.enabled = true;
+            //        leftHandRenderer.enabled = true;
+            //        rightHandRenderer.enabled = true;
+
+            //    }
+            //    //else
+            //    //{
+            //    //    headRenderer.enabled = false;
+            //    //    torsoRenderer.enabled = false;
+            //    //    leftHandRenderer.enabled = false;
+            //    //    rightHandRenderer.enabled = false;
+            //    //}
+            //}
+            ////renderToggle.Send();
 
         }
 
