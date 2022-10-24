@@ -334,7 +334,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: -10.657059, y: 94.99999}
+  m_AnchoredPosition: {x: -10.657059, y: 95.000114}
   m_SizeDelta: {x: 224.08, y: 2939}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &45832335
@@ -7106,8 +7106,7 @@ MonoBehaviour:
     boys.  And someday, you will connect with somebody special, and the feeling will
     be mutual.\"</color>\r\n<color=blue>Sounds like good advice.  How did she take
     it?</color>\r\n<color=red>She buried her face in the pillow and sobbed.  You
-    remember how it was with your first love.  It seemed like the world was over
-    when the relationship ended.  It's the same with her.</color>\r\n<color=blue>I
+    remember how it was with your first love.  It's the same with her.</color>\r\n<color=blue>I
     am so glad I am no longer a teen!</color>\r\n<color=red>Yeah, it is hard for
     teens to get a proper perspective on things at their age.</color>\r\n<color=blue>Good
     thing you were there for her and were able to give her some perspective.</color>\r\n\r\n\r\n2)
@@ -20694,7 +20693,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 874390025}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.06464783
+  m_Size: 0.06464784
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -62946,6 +62945,12 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3621865187524130748, guid: 2fb578800afc87244b5ba3a0fbbd11c0,
+        type: 3}
+      propertyPath: m_Icon
+      value: 
+      objectReference: {fileID: 5132851093641282708, guid: 0000000000000000d000000000000000,
+        type: 0}
     - target: {fileID: 3949007993748448212, guid: 2fb578800afc87244b5ba3a0fbbd11c0,
         type: 3}
       propertyPath: m_LocalPosition.x
