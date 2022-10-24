@@ -14,8 +14,7 @@ public class AudioIndicator : MonoBehaviour
     public Camera mainCamera;
     public Avatar avatar;
 
-    // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
         // find player camera
         mainCamera = Camera.main;
