@@ -263,7 +263,6 @@ public class Recorder
         initFile = false;
         frameNr = previousFrame = 0;
         recRep.timeInfo.text = "";
-
     }
 }
 
@@ -402,6 +401,7 @@ public class Replayer
     }
     private void UpdateFrame()
     {
+        //Debug.Log(recRep.currentReplayFrame);
         recRep.currentReplayFrame++;
         if (recRep.currentReplayFrame == recInfo.frames)
         {
@@ -666,6 +666,7 @@ public class Replayer
 
     public void Cleanup(bool unspawn)
     {
+        Debug.Log("RecorderReplayer Cleanup");
         recRep.replayTimeInfo.text = "";
         OnReplayStopped.Invoke(this, EventArgs.Empty);
         recRep.marker.Cleanup();
@@ -937,6 +938,11 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
 
             recorder.SaveRecordingInfo();
         }
+
+        if (replaying)
+        {
+            replayer.Cleanup(true);
+        }
     }
 
     // Update is called once per frame
@@ -960,7 +966,8 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
                     recorder.SaveRecordingInfo();
 
                     // stop replaying once recording stops as it does not make sense to see the old replay since there is already a new one
-                    if (replaying)
+                    // !!!! This gets never calles because replaying is set to false already in recRepMenu in the EndReplayAndCleanup!!!
+                    //if (replaying)
                     {
                         replaying = false;
                         cleanedUp = true;
@@ -968,6 +975,17 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
                         replayingStartTime = 0.0f;
                         stopTime = 0.0f;
                     }
+
+                    ////////////////////////
+                    ///// in single user mode, per default previous replays are loaded automatically
+                    // if record button is pressed replay starts too
+                    // if you only want to watch the replay alone you have to do so via the "play" menu button
+                    if (experiment.mode == ReplayMode.SingleUser)
+                    {
+                        Debug.Log("Automatically load replay (Single User Mode)");
+                        menuRecRep.ToggleReplay();
+                    }
+                    /////////////////////////
 
                     //SetReplayFile();
                     recordingAvailable = false; // avoid unnecessary savings of same info (is checked in methods too)
