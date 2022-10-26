@@ -1,84 +1,88 @@
+--------------------
+<b>Male first/left</b>
+--------------------
 1) Kai was a reasonable person who was listened to so he put her life in perspective.
-<color=red>So I told her, "You are young. There will be other boys.  And someday, you will connect with somebody special, and the feeling will be mutual."</color>
-<color=blue>Sounds like good advice.  How did she take it?</color>
-<color=red>She buried her face in the pillow and sobbed. You remember how it was with your first love. It's the same with her.</color>
-<color=blue>I am so glad I am no longer a teen!</color>
-<color=red>Yeah, it is hard for teens to get a proper perspective on things at their age.</color>
-<color=blue>Good thing you were there for her and were able to give her some perspective.</color>
-
+<color=blue>So I told her, "You are young. There will be other boys.  And someday, you will connect with somebody special, and the feeling will be mutual."</color>
+<color=red>Sounds like good advice.  How did she take it?</color>
+<color=blue>She buried her face in the pillow and sobbed. You remember how it was with your first love. It's the same with her.</color>
+<color=red>I am so glad I am no longer a teen!</color>
+<color=blue>Yeah, it is hard for teens to get a proper perspective on things at their age.</color>
 
 2) Ash got punched in the face and had to run home in terrible pain from this ordeal.
-<color=red>I can't believe that guy punched me.</color>
-<color=blue>It looks pretty bad.</color>
-<color=red>It hurts terrible, I had to run home like this.</color>
-<color=blue>You probably scared some people on your way.</color>
-<color=red>My face hurts so bad.</color>
-<color=blue>I bet, next time duck.</color>
+<color=blue>I can't believe that guy punched me.</color>
+<color=red>It looks pretty bad.</color>
+<color=blue>It hurts terrible, I had to run home like this.</color>
+<color=red>You probably scared some people on your way.</color>
+<color=blue>My face hurts so bad.</color>
+<color=red>I bet, next time duck.</color>
 
 
 3) Sydney met Carson's mother for the first time last week. He liked her.
-<color=red>I met Carson's mother last week for the first time.</color>
-<color=blue>How was she?</color>
-<color=red>She turned out to be really nice. I like her.</color>
-<color=blue>That's good to hear.</color>
-<color=red>It is, especially since Carson and I are getting serious.</color>
-<color=blue>Well, at least you'll like your in-law if you guys get married.</color>
+<color=blue>I met Carson's mother last week for the first time.</color>
+<color=red>How was she?</color>
+<color=blue>She turned out to be really nice. I like her.</color>
+<color=red>That's good to hear.</color>
+<color=blue>It is, especially since Carson and I are getting serious.</color>
+<color=red>Well, at least you'll like your in-law if you guys get married.</color>
 
 4) Kendall had a party at Jordan's house but was found out to not have asked and just broke in.
-<color=red>Did you hear about my party this weekend at Jordan's house?</color>
-<color=blue>I heard it was amazing, but that you broke in.</color>
-<color=red>That was a misunderstanding, I had permission to be there.</color>
-<color=blue>Who gave you permission?</color>
-<color=red>I talked to Jordan about it months ago before he left town to go to school, but he forgot to tell his roommates about it.</color>
-<color=blue>Ok cool, I hope everything gets resolved.</color>
+<color=blue>Did you hear about my party this weekend at Jordan's house?</color>
+<color=red>I heard it was amazing, but that you broke in.</color>
+<color=blue>That was a misunderstanding, I had permission to be there.</color>
+<color=red>Who gave you permission?</color>
+<color=blue>I talked to Jordan about it months ago before he left town to go to school, but he forgot to tell his roommates about it.</color>
+<color=red>Ok cool, I hope everything gets resolved.</color>
 
 5) Austin left in a huff of rage after they were beaten in the video game competition.
-<color=red>I got so mad, I couldn't contain it anymore.</color>
-<color=blue>Did you huff off?</color>
-<color=red>I did, I flared up into anger.</color>
-<color=blue>You need to calm down, it's just a video game.</color>
-<color=red>I know, I should not let it get to me like this.</color>
-<color=blue>Blow off some steam and come back.</color>
-
-
+<color=blue>I got so mad, I couldn't contain it anymore.</color>
+<color=red>Did you huff off?</color>
+<color=blue>I did, I flared up into anger.</color>
+<color=red>You need to calm down, it's just a video game.</color>
+<color=blue>I know, I should not let it get to me like this.</color>
+<color=red>Blow off some steam and come back.</color>
+--------------------
+<b>Male first/right</b>
+--------------------
 6) Ash was off sick for 3 weeks so when they returned Aubrey provided Ash an overview of what had been happening.
-<color=red>I had to fill Ash in with what happened in the last 3 weeks.</color>
-<color=blue>Was Ash out or something?</color>
-<color=red>He was off sick for 3 weeks.</color>
-<color=blue>That is quite a long time to be off.</color>
-<color=red>I got him caught up on what had been going on around here so we have nothing to worry about.</color>
+<color=blue>I had to fill Ash in with what happened in the last 3 weeks.</color>
+<color=red>Was Ash out or something?</color>
+<color=blue>He was off sick for 3 weeks.</color>
+<color=red>That is quite a long time to be off.</color>
+<color=blue>I got him caught up on what had been going on around here so we have nothing to worry about.</color>
 
 7) Jesse was horrible at saving money, they nickled and dimed everything.
-<color=red>Let's go to the casino.</color>
-<color=blue>Don't you think we should save some money instead of gambling it all away?</color>
-<color=red>I've never been good at saving, money is for spending.</color>
-<color=blue>Ok. Let's go hit the slots.</color>
-<color=red>I'm feeling lucky today, we might hit the jackpot.</color>
-<color=blue>That would be great since last time we lost big.</color>
+<color=blue>Let's go to the casino.</color>
+<color=red>Don't you think we should save some money instead of gambling it all away?</color>
+<color=blue>I've never been good at saving, money is for spending.</color>
+<color=red>Ok. Let's go hit the slots.</color>
+<color=blue>I'm feeling lucky today, we might hit the jackpot.</color>
+<color=red>That would be great since last time we lost big.</color>
 
 8) Riley and Sasha went hiking. Sasha was more experienced and went ahead before realizing it and stopping. Riley hurried to catch up to her height on the trail.
-<color=red>I went hiking with Sasha yesterday.</color>
-<color=blue>How did it go? I know she goes hiking a lot.</color>
-<color=red>It was really hard. She stormed ahead without realising it and had to stop and wait for me.</color>
-<color=blue>That's nice of her. How do you feel today?</color>
-<color=red>I'm exhuasted.</color>
+<color=blue>I went hiking with Sasha yesterday.</color>
+<color=red>How did it go? I know she goes hiking a lot.</color>
+<color=blue>It was really hard. She stormed ahead without realising it and had to stop and wait for me.</color>
+<color=red>That's nice of her. How do you feel today?</color>
+<color=blue>I'm exhuasted.</color>
 
 9) Carson went to visit the amazon rain forest 3 years ago and Jan finally heard back from carson.
-<color=red>Carson went to visit the amazon rain forest three years ago. He gave me a call when he got back!</color>
-<color=blue>Is he back in the city?</color>
-<color=red>He told me he just got back and was reaching out to all of his friends.</color>
-<color=blue>What did he do in the amazon forest?</color>
-<color=red>He's a researcher with the university. He went there to study a new species of beetle!</color>
-<color=blue>Wow, that's amazing!</color>
+<color=blue>Carson went to visit the amazon rain forest three years ago. He gave me a call when he got back!</color>
+<color=red>Is he back in the city?</color>
+<color=blue>He told me he just got back and was reaching out to all of his friends.</color>
+<color=red>What did he do in the amazon forest?</color>
+<color=blue>He's a researcher with the university. He went there to study a new species of beetle!</color>
+<color=red>Wow, that's amazing!</color>
 
 10) Riley had to work hard to fix her garden after a storm uprooted a tree onto her garden.
-<color=red>That was a really bad storm!</color>
-<color=blue>It was, the wind tore down trees all over the place.</color>
-<color=red>One fell down and wrecked my garden.</color>
-<color=blue>Oh no, are you going to fix it?</color>
-<color=red>Yeah, it's going to be a ton of work.</color>
-<color=blue>I hope it's not too bad.</color>
-
+<color=blue>That was a really bad storm!</color>
+<color=red>It was, the wind tore down trees all over the place.</color>
+<color=blue>One fell down and wrecked my garden.</color>
+<color=red>Oh no, are you going to fix it?</color>
+<color=blue>Yeah, it's going to be a ton of work.</color>
+<color=red>I hope it's not too bad.</color>
+--------------------
+<b>Female first/right</b>
+--------------------
 11) Jan was in art class for the first time. Jan will oil paint fruits and vases.
 <color=red>I have always wanted to take an art class, and so I finally started taking one yesterday.</color>
 <color=blue>Really? That's great! Do you like it so far?</color>
@@ -118,7 +122,9 @@
 <color=blue>Wait, does she speak English?</color>
 <color=red>No, she has yet to learn our language, we had a conversation in Spanish.</color>
 <color=blue>I didn't know you spoke Spanish.</color>
-        
+--------------------
+<b>Female first/left</b>
+--------------------        
 16) Lee's brother was sent to jail for robbery.  All the family shunned them except Lee who went to visit their brother every week.
 <color=red>I went to visit my brother the other day.</color>
 <color=blue>Is he well?</color>
