@@ -455,6 +455,20 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         Debug.Log("Play and consider latency " + samples);
     }
 
+    // this is used specifically for the single user case to make recordings of replays easier
+    public void PlayFromStartConsiderLatency()
+    {
+        foreach (var item in replayedAudioSources)
+        {
+            if (item.Value.isPlaying)
+            {
+                item.Value.Stop(); // stop means it plays from the beginning (as opposed to pause)
+            }
+            //refTime = Time.unscaledTime; not sure if i need this here
+            PlayAndConsiderLatency(item.Value, clipNumberToLatency[item.Key]);
+        }
+    }
+
     private void PlayPause(bool play)
     {
         //Debug.Log(mute.Length + " " + replayedAudioSources.Count);
@@ -801,16 +815,23 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         float packSize = ((float)samples.Length / (float)width);
         int s = 0;
 
-        for (float i = 0; Mathf.RoundToInt(i) < samples.Length && s < waveform.Length; i+=packSize)
-        {     
-            waveform[s] = Mathf.Abs(samples[Mathf.RoundToInt(i)]);
+        for (float i = 0; Mathf.RoundToInt(i) < samples.Length-packSize && s < waveform.Length; i+=packSize)
+        {
+            float sAvg = 0.0f;
+            for (int j = 0; j < packSize; j++)
+            {
+                sAvg += Mathf.Abs(samples[Mathf.RoundToInt(i) + j]);
+            }
+            sAvg /= packSize;
+            waveform[s] = sAvg;
+            //waveform[s] = Mathf.Abs(samples[Mathf.RoundToInt(i)]);
             s++;
         }
 
         for (int x = 0; x < waveform.Length; x++)
         {
             //Debug.Log(waveform[x] + " " + (float)height * 0.75f +  " " + (float)height);
-            for (int y = 0; y <= waveform[x] * ((float)height * 8); y++)
+            for (int y = 0; y <= waveform[x] * ((float)height); y++)
             {
                 tex.SetPixel(x, (height / 2) + y, col);
                 tex.SetPixel(x, (height / 2) - y, col);
@@ -878,6 +899,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 // only draw pointer on audio indicator in experiment mode
                 if (recRep.experiment.mode == ReplayMode.SingleUser)
                 {
+                    //Debug.Log(recRep.replaying + " " + recRep.play + " " + audioDataAvailable + " " + !startReadingFromFile);
                     // when replay is playing draw a line on the audio texture for the current position
                     if (recRep.replaying && recRep.play && audioDataAvailable && !startReadingFromFile)
                     {
