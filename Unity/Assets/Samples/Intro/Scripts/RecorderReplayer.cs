@@ -405,7 +405,7 @@ public class Replayer
         recRep.currentReplayFrame++;
         if (recRep.currentReplayFrame == recInfo.frames)
         {
-            if (!recRep.automatedReplay)
+            if (!recRep.automatedReplay && recRep.experiment.mode != ReplayMode.Presentation )
             {
                 OnReplayRepeat.Invoke(this, EventArgs.Empty);
                 recRep.currentReplayFrame = 0;
@@ -855,6 +855,11 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
                 roomClient.Me["creator"] = "0";
             }
         }
+        else if (experiment.mode == ReplayMode.Presentation)
+        {
+            Debug.Log("Presentation Mode: no creator");
+            roomClient.Me["creator"] = "0";
+        }
 
     }
 
@@ -977,14 +982,14 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
                     }
 
                     ////////////////////////
-                    ///// in single user mode, per default previous replays are loaded automatically
+                    ///// in single user mode (and also multi-user mode), per default previous replays are loaded automatically
                     // if record button is pressed replay starts too
                     // if you only want to watch the replay alone you have to do so via the "play" menu button
-                    if (experiment.mode == ReplayMode.SingleUser)
-                    {
-                        Debug.Log("Automatically load replay (Single User Mode)");
-                        menuRecRep.ToggleReplay();
-                    }
+                    //if (experiment.mode == ReplayMode.SingleUser)
+                    //{
+                    Debug.Log("Automatically load replay");
+                    menuRecRep.ToggleReplay();
+                    //}
                     /////////////////////////
 
                     //SetReplayFile();
