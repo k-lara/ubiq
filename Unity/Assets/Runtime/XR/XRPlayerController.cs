@@ -45,11 +45,27 @@ namespace Ubiq.XR
             handControllers = GetComponentsInChildren<HandController>();
         }
 
+        private void RotateCamera(bool pressed)
+        {
+            if (pressed)
+            {
+                transform.RotateAround(headCamera.transform.position, Vector3.up, 90f);
+            }
+        }
+
         private void Start()
         {
             foreach (var item in GetComponentsInChildren<TeleportRay>())
             {
                 item.OnTeleport.AddListener(OnTeleport);
+            }
+
+            foreach (var item in handControllers)
+            {
+                if (item.Left)
+                {
+                    item.JoystickPress.AddListener(RotateCamera);
+                }
             }
         }
 
