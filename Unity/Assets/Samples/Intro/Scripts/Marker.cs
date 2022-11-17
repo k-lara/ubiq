@@ -214,6 +214,8 @@ public class Marker : MonoBehaviour
         return currentAvatarMarkers;
     }
 
+    // this only works for one-handed grip. 
+    // two-handed grips cancel each other out due to the way data is read from .json
     public void MarkControllerGrip(bool isGripped)
     {
 
