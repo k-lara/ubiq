@@ -13,5 +13,8 @@ MonoBehaviour:
   m_Name: Reduced Floating Textures
   m_EditorClassIdentifier: 
   Textures:
+  - {fileID: 2800000, guid: 96c241be5bb2e98498fe4ba1db9a79fa, type: 3}
+  - {fileID: 2800000, guid: 660499a492353cf44a3e2f3fde9e5cc8, type: 3}
+  - {fileID: 2800000, guid: e9969945f06df8245abcffb773a8d794, type: 3}
   - {fileID: 2800000, guid: e13217dfdcaca96438f350038453f9ee, type: 3}
-  - {fileID: 2800000, guid: c88d7fe51f0013448976b620274be6c3, type: 3}
+  - {fileID: 2800000, guid: dd28c28f1dc116f40844fcda77a61f15, type: 3}
