@@ -75,12 +75,12 @@ def organize_downloaded(files):
     for file in files:
         
         filename = os.path.basename(file).split('.')[0]
-        # print(file)
+        print(file)
         dir_name = "_".join(filename.split("_", 2)[:2])
         new_file = "-".join(filename.split("-", 5)[:5])
 
-        # print(mp3_to_wav_folder)
-        # print(dir_name)
+        print(mp3_to_wav_folder)
+        print(dir_name)
         new_dir = os.path.join(mp3_to_wav_folder, dir_name)
         if not os.path.exists(new_dir):
             os.makedirs(new_dir)
@@ -164,17 +164,18 @@ def samples_to_bytes(clip_nr, data, num_packages, samples_per_package):
 
 if __name__ == "__main__":
 
-    folder = "C:/Users/klara/PhD/Projects/ubiqFork/AudioProcessing/original"
+    original_folder = "C:/Users/klara/PhD/Projects/ubiqFork/AudioProcessing/original"
+    original_files = glob.glob(original_folder + "/audiorec*") # get audio files
+    
     wav_folder = "C:/Users/klara/PhD/Projects/ubiqFork/AudioProcessing/wav"
 
     mp3_to_wav_folder = "C:/Users/klara/PhD/Projects/ubiqFork/AudioProcessing/mp3_to_wav"
 
     transformed = "C:/Users/klara/PhD/Projects/ubiqFork/AudioProcessing/transformed"
 
-    files = glob.glob(folder + "/audiorec*") # get audio files
 
     downloaded  = "C:\\Users\\klara\\PhD\\Projects\\ubiqFork\\AudioProcessing\\downloaded"
-    
+    downloaded_files = glob.glob(downloaded + "/audiorec*")
 
 
     # newFileNames = []
@@ -189,11 +190,11 @@ if __name__ == "__main__":
     # infos = glob.glob(folder + "/IDs*")
     # separate audio tracks 
 
-    # to_wav(files)
+    # to_wav(original_files)
 
 
     # mp3s = glob.glob(downloaded + "/audiorec*")
-    # organize_downloaded(mp3s)
+    # organize_downloaded(downloaded_files)
 
     wav_to_raw_data(mp3_to_wav_folder)
    
