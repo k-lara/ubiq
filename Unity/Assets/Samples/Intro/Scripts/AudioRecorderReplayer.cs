@@ -626,7 +626,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             ai.gameObject.transform.GetChild(0).gameObject.SetActive(false); // deactivate canvas game object to hide audio and marker info
         }
         else
-        {
+        { // show indicators in single mode
             ai.gameObject.transform.GetChild(0).gameObject.SetActive(true);
         }
         audioIndicators.Add(ai);
@@ -742,9 +742,17 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         if (audioFileStream.Position >= audioFileStream.Length)
         {
             Debug.Log("Finished reading audio data!");
-            recRep.loadingInfoText.text = "Loading finished!";
-            StartCoroutine(recRep.marker.FadeTextToZeroAlpha(1.5f, recRep.loadingInfoText));
-            //recRep.loadingInfoText.CrossFadeAlpha(0.0f, 2.0f, false);
+            if (recRep.experiment.mode == ReplayMode.Presentation)
+            {
+                recRep.loadingInfoText.text = "Loading finished!";
+                recRep.loadingInfoText.color = Color.clear;
+            }
+            else
+            {
+                recRep.loadingInfoText.text = "Loading finished!";
+                StartCoroutine(recRep.marker.FadeTextToZeroAlpha(1.5f, recRep.loadingInfoText));
+                //recRep.loadingInfoText.CrossFadeAlpha(0.0f, 2.0f, false);
+            }
             startReadingFromFile = false;
             
             SetLatencies();
@@ -831,7 +839,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         for (int x = 0; x < waveform.Length; x++)
         {
             //Debug.Log(waveform[x] + " " + (float)height * 0.75f +  " " + (float)height);
-            for (int y = 0; y <= waveform[x] * ((float)height); y++)
+            for (int y = 0; y <= waveform[x] * ((float)height * 4); y++)
             {
                 tex.SetPixel(x, (height / 2) + y, col);
                 tex.SetPixel(x, (height / 2) - y, col);
