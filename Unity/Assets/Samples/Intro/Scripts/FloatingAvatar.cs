@@ -39,7 +39,7 @@ namespace Ubiq.Samples
         // for record and replay to prevent having the torso dragged after the avatars when spawning for replay
         private NetworkScene scene;
         private RecorderReplayer recRep;
-        private bool firstFrame = true;
+        public bool firstMessage = false;
 
         public class Message
         {
@@ -215,16 +215,22 @@ namespace Ubiq.Samples
                     head.position = Vector3.Lerp(firstMsg.position, pos, 0.5f);
                     head.rotation = Quaternion.Lerp(firstMsg.rotation, rot, 0.05f);
 
-                    if (recRep.replaying && recRep.play && firstFrame)
-                    {
-                        Debug.Log("call: " + baseOfNeckHint.position.ToString());
-                        footPosition = baseOfNeckHint.position;
-                        torsoFacing = Quaternion.LookRotation(head.forward, Vector3.up);
-                        firstFrame = false;
-                    }
 
                     saveFirst = false;
                 }
+                // this is to make sure that the torso is at the correct position and is not dragged after the head
+                if (recRep.replaying && !firstMessage)
+                {
+                    head.position = pos;
+                    head.rotation = rot;
+                    Debug.Log("call: " + baseOfNeckHint.position.ToString());
+                    footPosition = baseOfNeckHint.position;
+                    var fwd = head.forward;
+                    fwd.y = 0;
+                    torsoFacing = Quaternion.LookRotation(fwd, Vector3.up);
+                    firstMessage = true;
+                }
+                //Debug.Log(pos.ToString());
             }
             else
             {
@@ -264,12 +270,11 @@ namespace Ubiq.Samples
 
         private float startTimeLeft = 0.0f;
         Message firstMsgLeft;
+        private bool firstMessageLeft = false;
         private bool saveFirstLeft = false;
         private void ThreePointTrackedAvatar_OnLeftHandUpdate(Vector3 pos, Quaternion rot)
         {
             Message msg = new Message() { position = pos, rotation = rot, frame = Time.frameCount, time = Time.unscaledTime };
-            //Debug.Log(avatar.IsLocal + " " + avatar.Id + " " + lastFrameHead + " " + Time.frameCount);
-
             if (!avatar.IsLocal)
             {
                 if (!saveFirstLeft)
@@ -285,7 +290,13 @@ namespace Ubiq.Samples
                     leftHand.rotation = Quaternion.Lerp(firstMsgLeft.rotation, rot, 0.05f);
                     saveFirstLeft = false;
                 }
-            }
+                if (recRep.replaying && !firstMessageLeft)
+                {
+                    leftHand.position = pos;
+                    leftHand.rotation = rot;
+                    firstMessageLeft = true;
+                }
+            }  
             else
             {
                 leftHand.position = pos;
@@ -293,6 +304,7 @@ namespace Ubiq.Samples
             }
         }
         private float startTimeRight = 0.0f;
+        private bool firstMessageRight = false;
         Message firstMsgRight;
         private bool saveFirstRight = false;
         private void ThreePointTrackedAvatar_OnRightHandUpdate(Vector3 pos, Quaternion rot)
@@ -314,6 +326,12 @@ namespace Ubiq.Samples
                     rightHand.position = Vector3.Lerp(firstMsgRight.position, pos, 0.5f);
                     rightHand.rotation = Quaternion.Lerp(firstMsgRight.rotation, rot, 0.05f);
                     saveFirstRight = false;
+                }
+                if (recRep.replaying && !firstMessageRight)
+                {
+                    rightHand.position = pos;
+                    rightHand.rotation = rot;
+                    firstMessageRight = true;
                 }
             }
             else

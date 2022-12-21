@@ -224,8 +224,20 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         {
             //var latency = ComputeLatencySamples(latenciesMs[i]);
             //int multiplier = Mathf.RoundToInt(Mathf.Pow(2.0f, r));
-            var latency = ComputeLatencySamples(currentLatency);
-            latenciesMs[i] = currentLatency;
+            int latency = 0;
+            if (i == 0)
+            {
+                latency = ComputeLatencySamples(currentLatency);
+                latenciesMs[i] = currentLatency;
+
+            }
+            else
+            {
+                latency = ComputeLatencySamples(currentLatency);
+                latenciesMs[i] = currentLatency;
+
+            }
+            //var latency = ComputeLatencySamples(currentLatency);
 
             if (item.Value.timeSamples > 0) // if clip was already playing but latency is adapted afterwards
             {
@@ -713,7 +725,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 //Debug.Log("checked original" + l + " " + s);
                 clipPos = audioClipPositions[s];
 
-                Debug.Log("sizes: " + l + " " + s);
+                //Debug.Log("sizes: " + l + " " + s);
                 audioPckg = new byte[l]; // contains audio data without bytes for short "uuid"
                 audioFileStream.Read(audioPckg, 0, audioPckg.Length);
                 //Debug.Log("stream position " + audioFileStream.Position);

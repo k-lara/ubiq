@@ -39,7 +39,10 @@ namespace Ubiq.Avatars
 
         private void Start()
         {
-            context = NetworkScene.Register(this);
+            if (context == null)
+            {
+                context = NetworkScene.Register(this);
+            }
             networkSceneRoot = context.scene.transform;
         }
 
@@ -122,6 +125,12 @@ namespace Ubiq.Avatars
         // State has been set either remotely or locally so update listeners
         private void OnRecv ()
         {
+            // little hack to allow sending of messages to this class before Start() is called
+            if (context == null)
+            {
+                context = NetworkScene.Register(this);
+                networkSceneRoot = context.scene.transform;
+            }
             // Transform with our network scene root to get world position/rotation
             var head = TransformPosRot(state[0].head,networkSceneRoot);
             var leftHand = TransformPosRot(state[0].leftHand,networkSceneRoot);

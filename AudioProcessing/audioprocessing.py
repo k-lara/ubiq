@@ -177,6 +177,7 @@ if __name__ == "__main__":
     downloaded  = "C:\\Users\\klara\\PhD\\Projects\\ubiqFork\\AudioProcessing\\downloaded"
     downloaded_files = glob.glob(downloaded + "/audiorec*")
 
+    selected_clips_folder = "C:\\Users\\klara\\PhD\\Projects\\ubiqFork\\AudioProcessing\\selected_clips_wav"
 
     # newFileNames = []
     # for file in mp3s:
@@ -196,7 +197,7 @@ if __name__ == "__main__":
     # mp3s = glob.glob(downloaded + "/audiorec*")
     # organize_downloaded(downloaded_files)
 
-    wav_to_raw_data(mp3_to_wav_folder)
-   
+    # wav_to_raw_data(mp3_to_wav_folder)
+    wav_to_raw_data(selected_clips_folder)
 
 

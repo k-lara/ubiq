@@ -44,6 +44,8 @@ namespace Ubiq.Samples
         private int samples = 0;
         private int latencySamples = 0;
 
+        private Camera facingCamera;
+
         private void Update()
         {
             if (replayAudioSource && replayAudioSource.isPlaying) // if not playing don't bother
@@ -125,6 +127,16 @@ namespace Ubiq.Samples
         {
             avatar = GetComponentInParent<Avatars.Avatar>();
             voipAvatar = GetComponentInParent<VoipAvatar>();
+
+            var exp = Ubiq.Messaging.NetworkScene.FindNetworkScene(this).GetComponentInChildren<ExperimentSettings>();
+            if (exp.mode == ReplayMode.Presentation)
+            {
+                facingCamera = GameObject.FindGameObjectWithTag("VideoCamera").GetComponent<Camera>();
+            }
+            else
+            {
+                facingCamera = Camera.main;
+            }
         }
 
         private void LateUpdate()
@@ -263,7 +275,8 @@ namespace Ubiq.Samples
 
         private void UpdatePosition()
         {
-            var cameraTransform = Camera.main.transform;
+            //var cameraTransform = Camera.main.transform; 
+            var cameraTransform = facingCamera.transform;
             var headTransform = transform.parent;
             var indicatorRootTransform = transform;
 
