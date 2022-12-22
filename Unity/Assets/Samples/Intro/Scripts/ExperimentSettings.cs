@@ -34,6 +34,8 @@ public class ExperimentSettings : MonoBehaviour
     public RecorderReplayer recRep;
     public AvatarManager avatarManager;
     public List<Canvas> canvases;
+    public PlayerPosition playerPosition; // create different starting player positions for study
+    public Vector3 studyUIPosition; // position of study UI in front of player 
     public ReplayMode mode;
 
     private string pathToRecordings = "C:/Users/klara/AppData/LocalLow/ucl/interactive_recordreplay/Recordings";
@@ -89,7 +91,7 @@ public class ExperimentSettings : MonoBehaviour
     public void Start()
     {
         // set path to recordings
-        recRep.path = pathToRecordings;
+        //recRep.path = pathToRecordings;
 
         // hide menu, script, and info canvases in presentation mode
         if (mode == ReplayMode.Presentation)
