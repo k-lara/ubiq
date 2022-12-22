@@ -277,6 +277,7 @@ public class Replayer
     public event EventHandler OnReplayRepeat;
     public event EventHandler<bool> OnReplayPaused;
     public event EventHandler OnReplayStopped;
+    public event EventHandler OnReplayCleanedUp;
 
     private NetworkSpawner spawner;
 
@@ -524,10 +525,11 @@ public class Replayer
             }
             recRep.audioRecRep.OnLoadingReplay(recInfo); // this also sets the audio indicators which need marker info already
             Debug.Log("Info loaded!");
+
         }
         else
         {
-            Debug.Log("Invalid replay file ID path!" + recRep.path + "/IDs" + replayFile + ".txt");
+            Debug.Log("Invalid replay file ID path! " + recRep.path + "/IDs" + replayFile + ".txt");
             recRep.menuRecRep.ToggleReplay();
             recRep.replaying = false;
             loadingStarted = false;
@@ -546,11 +548,50 @@ public class Replayer
             loadingStarted = false;
         }
         loaded = objectsCreated && opened;
-        if (loaded && recRep.automatedReplay)
+        
+        if (loaded)
         {
-            OnReplayLoaded.Invoke(this, EventArgs.Empty); // once replay is loaded writing motion data do file can start
-            recRep.play = true; // start playing
+            OnReplayLoaded.Invoke(this, EventArgs.Empty);
         }
+        // for automated replay (this is an older version)
+        //if (loaded && recRep.automatedReplay)
+        //{
+        //    OnReplayLoaded.Invoke(this, EventArgs.Empty); // once replay is loaded writing motion data so file can start
+        //    recRep.play = true; // start playing
+        //}
+
+        // in presentation mode we might want to make the avatars already visible and position them
+        if (recRep.experiment.mode == ReplayMode.Presentation)
+        {
+            bool allFirstFrames = false;
+            List<FloatingAvatar> avatars = new List<FloatingAvatar>();
+
+            foreach (var props in replayedObjects.Values)
+            {
+                if (props.gameObject.TryGetComponent(out FloatingAvatar avatar))
+                {
+                    avatars.Add(avatar);
+                }
+                props.hider.SetLayer(0);
+            }
+
+            while (!allFirstFrames && recRep.currentReplayFrame < 10)
+            {
+                Debug.Log("Replay first messages: " + recRep.currentReplayFrame);
+                ReplayFromFile();
+                UpdateFrame();
+
+                bool firstMessagesDone = true;
+                foreach (var avatar in avatars)
+                {
+                    firstMessagesDone &= avatar.firstMessage;
+                }
+                allFirstFrames = firstMessagesDone;
+            }
+            recRep.currentReplayFrame = 0; // reset replay frame
+        }
+
+
     }
     private bool OpenStream(string filepath)
     {
@@ -644,6 +685,7 @@ public class Replayer
             }
             catch (Exception e)
             {
+                //Debug.Log(e.ToString());
                 // this happens often with RecorderReplayer object... i don't know why it gets recorded
                 //Debug.Log("KeyNotFoundException with objectid");
             }
@@ -708,6 +750,8 @@ public class Replayer
         
         if (streamFromFile != null)
             streamFromFile.Close();
+
+        OnReplayCleanedUp.Invoke(this, EventArgs.Empty);
     }
 }
 [RequireComponent(typeof(AudioRecorderReplayer))]
@@ -728,12 +772,12 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
     // EXTRAS
     [HideInInspector] public Marker marker; // markers to mark special events during a recording
     [HideInInspector] public ReplayedAvatarRemover avatarRemover; // removes selected avatars from replay and creates new recording without them
-    [HideInInspector] public Experiment experiment;
+    [HideInInspector] public ExperimentSettings experiment;
 
+    public string path;
     public string replayFile;
     [HideInInspector] public string recordFile = null;
     [HideInInspector] public string audioRecordFile = null;
-    [HideInInspector] public string path;
     [HideInInspector] public bool recording, replaying;
     [HideInInspector] public bool play = false;
     [HideInInspector] public int sliderFrame = 0;
@@ -788,6 +832,8 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
         //Application.targetFrameRate = 60;
         //Time.captureFramerate = 400;
         path = Application.persistentDataPath + "/Recordings";
+        //path = Path.Combine(Application.streamingAssetsPath, "recordings");
+        Debug.Log("RecorderReplayer PATH: " + path);
 
         if (!Directory.Exists(path))
         {
@@ -798,7 +844,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
 
         marker = GetComponent<Marker>();
         avatarRemover = GetComponent<ReplayedAvatarRemover>();
-        experiment = GetComponent<Experiment>();
+        experiment = GetComponent<ExperimentSettings>();
 
         // create Recorder and Replayer
         Debug.Log("Assign RecorderReplayer to Recorder and Replayer");

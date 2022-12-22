@@ -11,6 +11,7 @@ public class AvatarExperiment : MonoBehaviour
     public int PROGRESSACTIONS; // number of actions (button presses) a user has to perform in order to progress through the study
     public ProgressBar progressBar;
 
+    public PlayerRaycasting raycasting;
     public RecorderReplayer recRep;
     public MeasurementsUploader uploader;
     public Logger logger;
@@ -46,6 +47,9 @@ public class AvatarExperiment : MonoBehaviour
     private bool responseSelected = false;
     private bool gotoNextPanel = false;
     private bool allQuestionsAnswered = false;
+    private int maxFrame = 0;
+    private bool replayLoaded = false;
+    private bool replayCleanedUp = false;
 
     //private string q1 = "Distraction"; // actually this is "attention" now
     private string q2 = "Gender";
@@ -97,7 +101,7 @@ public class AvatarExperiment : MonoBehaviour
     private Queue<string> queueFirstRound;
     private Queue<string> queueSecondRound;
 
-    private float fadeTime = 1.0f;
+    private float fadeTime = 2.0f;
     private int ROUND = 1; // experiment consists of 2 rounds, in first round participants don't know about record and replay
     private string watchFirstVid = "<b>Watch the 1st recording!</b>";
     private string watchSecondVid = "<b>Watch the 2nd recording!</b>";
@@ -159,12 +163,6 @@ public class AvatarExperiment : MonoBehaviour
         public string about; // what do they think the study is about
         public string feedback;
     }
-    //[System.Serializable]
-    //public class QuestionnaireResponse
-    //{
-    //    public string question;
-    //    public string answer;
-    //}
 
     void Start()
     {
@@ -176,45 +174,75 @@ public class AvatarExperiment : MonoBehaviour
         queueFirstRound = new Queue<string>(filesFirstRound);
         queueSecondRound = new Queue<string>(filesSecondRound);
 
-        recRep.path = Path.Combine(Application.streamingAssetsPath, "recordings");
-        Debug.Log("Overwrite RecorderReplayer path to recordings: " + recRep.path);
+        // do this in RecorderReplayer itself!
+        //recRep.path = Path.Combine(Application.streamingAssetsPath, "recordings");
+        //Debug.Log("Overwrite RecorderReplayer path to recordings: " + recRep.path);
 
         experimentData = new ExperimentData();
         
         experimentData.participantID = ParticipantID;
         // the response is not known here but we will set it once we do 
         uploader.OnUploadSuccessful += Uploader_OnUploadSuccessful;
+        recRep.replayer.OnReplayLoaded += Replayer_OnReplayLoaded;
+        recRep.replayer.OnReplayCleanedUp += Replayer_OnReplayCleanedUp;
+        StartCoroutine(StudyProcedureCoroutine());
+    }
+
+    private void Replayer_OnReplayCleanedUp(object sender, EventArgs e)
+    {
+        replayCleanedUp = true;
+        Debug.Log("Coroutine: Replay cleaned up!");
+
+    }
+
+    private void Replayer_OnReplayLoaded(object sender, EventArgs e)
+    {
+        replayLoaded = true;
+        maxFrame = recRep.replayer.recInfo.frames;
+        Debug.Log("Coroutine: Replay loaded!");
     }
 
     // on consent button press
     public void GiveConsent()
     {
         consentGiven = true;
+        Debug.Log("Coroutine: Consent given!");
+
     }
     // on adjust height button press
     public void AdjustHeight()
     {
         adjustHeight = true;
+        Debug.Log("Coroutine: Height adjusted!");
+
     }
 
     public IEnumerator LoadReplay(string fileName)
     {
+        Debug.Log("Load replay: " + fileName);
         recRep.menuRecRep.SelectReplayFile(fileName);
         recRep.menuRecRep.ToggleReplay();
 
         yield return new WaitUntil(() => recRep.replayer.recInfo != null);
+
     }
     public void DisableCanvas()
     {
         canvas.enabled = false;
+        Debug.Log("Coroutine: Canvas disabled!");
+
     }
     public void EnableCnavas()
     {
         canvas.enabled = true;
+        Debug.Log("Coroutine: Canvas enabled!");
+
     }
     public void NextButtonPressed()
     {
         gotoNextPanel = true;
+        Debug.Log("Coroutine: 'Next' button pressed!");
+
     }
     public void ResponseSelected(Button btn)
     {
@@ -229,6 +257,7 @@ public class AvatarExperiment : MonoBehaviour
             Debug.Log("Second button selected!");
             userResponse.userSelection = 2;
         }
+        responseSelected = true;
     }
 
     public IEnumerator StudyProcedureCoroutine()
@@ -252,26 +281,35 @@ public class AvatarExperiment : MonoBehaviour
         {
             // FIRST REPLAY
             var firstReplay = queueFirstRound.Dequeue();
-            LoadReplay(firstReplay);
-            var maxFrame = recRep.replayer.recInfo.frames;
+            yield return LoadReplay(firstReplay);
+            yield return new WaitUntil(() => replayLoaded);
+            replayLoaded = false;
             promptText.text = watchFirstVid;
-            FadeText(fadeTime, promptText);
+            yield return FadeText(fadeTime, promptText);
+            raycasting.RaycastingEnabled(true);
             recRep.menuRecRep.PlayPauseReplay();
             // wait for the replay to be played almost to the end pause and delete the replay
             yield return new WaitUntil(() => recRep.currentReplayFrame >= maxFrame - 10);
+            raycasting.RaycastingEnabled(false);
             recRep.menuRecRep.PlayPauseReplay();
+            yield return new WaitForSeconds(0.5f);
             recRep.menuRecRep.ToggleReplay();
-
+            yield return new WaitUntil(() => replayCleanedUp);
             // SECOND REPLAY: load second replay, show text, and play
             var secondReplay = queueFirstRound.Dequeue();
-            LoadReplay(secondReplay);
-            maxFrame = recRep.replayer.recInfo.frames;
+            yield return LoadReplay(secondReplay);
+            yield return new WaitUntil(() => replayLoaded);
+            replayLoaded = false;
             promptText.text = watchSecondVid;
-            FadeText(fadeTime, promptText);
+            yield return FadeText(fadeTime, promptText);
+            raycasting.RaycastingEnabled(true);
             recRep.menuRecRep.PlayPauseReplay();
             yield return new WaitUntil(() => recRep.currentReplayFrame >= maxFrame - 10);
+            raycasting.RaycastingEnabled(false);
             recRep.menuRecRep.PlayPauseReplay();
+            yield return new WaitForSeconds(0.5f);
             recRep.menuRecRep.ToggleReplay();
+            yield return new WaitUntil(() => replayCleanedUp);
 
             EnableCnavas();
             SwitchPanel(selectionPanel);
@@ -281,6 +319,7 @@ public class AvatarExperiment : MonoBehaviour
             userResponse = new UserResponse(ROUND, -1, firstReplay, secondReplay);
             yield return new WaitUntil(() => responseSelected);
             responseSelected = false;
+            Debug.Log("user response: " + JsonUtility.ToJson(userResponse));
             experimentData.videoResponses.Add(userResponse);
         }
 
@@ -288,7 +327,7 @@ public class AvatarExperiment : MonoBehaviour
         progressBar.UpdateProgress();
         logger.LogQuestionPanelSwitch(ROUND);
         yield return new WaitForSeconds(waitForSeconds); // wait for 1 minute until button gets enabled! so participants cannot accidentaly continue
-        nextButton.enabled = true;
+        nextButton.interactable = true;
         yield return new WaitUntil(() => gotoNextPanel);
         SwitchPanel(questionnairePanel); // set 1: attention check panel
         progressBar.UpdateProgress();
@@ -301,23 +340,28 @@ public class AvatarExperiment : MonoBehaviour
         questionText.text = secondQuestion; // for interview questions after ROUND 2
         ROUND = 2;
         gotoNextPanel = false;
-        nextButton.enabled = false;
+        nextButton.interactable = false;
         // START ROUND 2 and DISABLE CANVAS ON BUTTON CLICK
         yield return new WaitUntil(() => !canvas.enabled);
         logger.LogVideoPanelSwitch();
 
         while(queueSecondRound.Count > 0)
         {
-            var replay = queueFirstRound.Dequeue();
-            LoadReplay(replay);
-            var maxFrame = recRep.replayer.recInfo.frames;
+            var replay = queueSecondRound.Dequeue();
+            yield return LoadReplay(replay);
+            yield return new WaitUntil(() => replayLoaded);
+            replayLoaded = false;
             promptText.text = watchMixedVid;
-            FadeText(fadeTime, promptText);
+            yield return FadeText(fadeTime, promptText);
+            raycasting.RaycastingEnabled(true);
             recRep.menuRecRep.PlayPauseReplay();
             // wait for the replay to be played almost to the end pause and delete the replay
             yield return new WaitUntil(() => recRep.currentReplayFrame >= maxFrame - 10);
+            raycasting.RaycastingEnabled(false);
             recRep.menuRecRep.PlayPauseReplay();
+            yield return new WaitForSeconds(0.5f);
             recRep.menuRecRep.ToggleReplay();
+            yield return new WaitUntil(() => replayCleanedUp);
 
             EnableCnavas();
             SwitchPanel(selectionPanel);
@@ -333,7 +377,7 @@ public class AvatarExperiment : MonoBehaviour
         progressBar.UpdateProgress();
         logger.LogQuestionPanelSwitch(ROUND);
         yield return new WaitForSeconds(waitForSeconds); // wait for 1 minute until button gets enabled! so participants cannot accidentaly continue
-        nextButton.enabled = true;
+        nextButton.interactable = true;
         yield return new WaitUntil(() => gotoNextPanel);
         gotoNextPanel = false;
         logger.LogQuestionnairePanelSwitch();
