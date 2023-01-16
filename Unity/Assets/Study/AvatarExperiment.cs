@@ -10,6 +10,9 @@ public class AvatarExperiment : MonoBehaviour
 {
     public int PROGRESSACTIONS; // number of actions (button presses) a user has to perform in order to progress through the study
     public ProgressBar progressBar;
+    public PlayerPosition playerPosition;
+    public GameObject buttonLeftGO, buttonRightGO, buttonNextGO, buttonBeginGO, buttonEndGO, buttonHeightGO; // physical buttons
+    private PhysicsButton btnL, btnR, btnN, btnBegin, btnEnd, btnHeight;
 
     public PlayerRaycasting raycasting;
     public RecorderReplayer recRep;
@@ -17,6 +20,7 @@ public class AvatarExperiment : MonoBehaviour
     public Logger logger;
 
     //public string recordingsDir;
+    public Canvas promptCanvas;
     public Text promptText; // any text that prompts the user to do something
 
     public Canvas canvas;
@@ -80,8 +84,8 @@ public class AvatarExperiment : MonoBehaviour
             //"rec05b", "rec05r1",
             //"rec06r1", "rec06n",
             //"rec01r2", "rec01b",
-        };   
-    
+        };
+
     private string[] filesSecondRound = new string[]
         {
             "rec01b","rec02r1",
@@ -98,14 +102,16 @@ public class AvatarExperiment : MonoBehaviour
             //"rec06r1","rec05n"
         };
 
+
+
     private Queue<string> queueFirstRound;
     private Queue<string> queueSecondRound;
 
     private float fadeTime = 2.0f;
     private int ROUND = 1; // experiment consists of 2 rounds, in first round participants don't know about record and replay
-    private string watchFirstVid = "<b>Watch the 1st recording!</b>";
-    private string watchSecondVid = "<b>Watch the 2nd recording!</b>";
-    private string watchMixedVid = "<b>Watch the recording!</b>";
+    private string watchFirstVid = "Watch the 1st recording!";
+    private string watchSecondVid = "Watch the 2nd recording!";
+    private string watchMixedVid = "Watch the recording!";
     private string secondRoundSelectionText = "<b>Were there one or two actors in the recording you just saw?</b>";
 
     private string questionPrompt = "<b>Answer the following questions:</b>";
@@ -116,6 +122,8 @@ public class AvatarExperiment : MonoBehaviour
     private string secondQuestion = "<b> 1.) What were your deciding factors when you selected the number of actors? \n" +
         "<color=red>2.) What did you look for in the recordings to figure out if they were recorded by one person?</color></b>";
 
+    private string headsetOffPromptWithID;
+
     private ExperimentData experimentData;
     private UserResponse userResponse;
     //private string questionResponse = "";
@@ -124,6 +132,7 @@ public class AvatarExperiment : MonoBehaviour
     public class ExperimentData
     {
         public string participantID;
+        public PlayerPosition.Distances distance;
         public List<UserResponse> videoResponses = new List<UserResponse>();
         public Questionnaire questions = new Questionnaire();
         public List<EventRecord> eventRecords = new List<EventRecord>();
@@ -136,13 +145,17 @@ public class AvatarExperiment : MonoBehaviour
         public int userSelection; // lists which video was selected by the participant (either first '1' or second '2', in round 2 '1' means one actor and '2' means two actors)!!!
         public string firstVideo; 
         public string secondVideo; // in round 2 this is empty because we only have one video per user response
+        public PlayerRaycasting.RaycastInfo raycastInfo1; // for first replay in Round 1 and replay in Round 2
+        public PlayerRaycasting.RaycastInfo raycastInfo2; // for second replay in Round 1 (empty in Round 2)
 
-        public UserResponse(int round, int userSelection, string firstVideo, string secondVideo)
+        public UserResponse(int round, int userSelection, string firstVideo, string secondVideo, PlayerRaycasting.RaycastInfo raycastInfo1, PlayerRaycasting.RaycastInfo raycastInfo2)
         {
             this.round = round;
             this.userSelection = userSelection;
             this.firstVideo = firstVideo;
             this.secondVideo = secondVideo;
+            this.raycastInfo1 = raycastInfo1;
+            this.raycastInfo2 = raycastInfo2; // is empty in Round 2
         }
     }
 
@@ -168,18 +181,34 @@ public class AvatarExperiment : MonoBehaviour
     {
         qSet2 = new string[] { q2, q3, q4, q5 }; // questions in set 2
         // first round is answered in pairs, second round individually + then 2 open text questions after each round + 3 questionnaire sets (attention, demographics, feedback)
-        PROGRESSACTIONS = filesFirstRound.Length / 2 + filesSecondRound.Length + 2 + 3;
+        PROGRESSACTIONS = filesFirstRound.Length / 2 + filesSecondRound.Length; // without questions as they will be on PC
 
-        ParticipantID = DateTime.Now.ToString("HH-mm-ss_dd/MM/YYYY");
+        ParticipantID = DateTime.Now.ToString("HH-mm-ss_dd-MM-yyyy");
+        var shortID = ParticipantID.Split('_');
+        //questionText.text = "<b>Please take off the headset to answer questions about the videos you just watched! Remember your ID: </b>" + 
+        //    string.Format("<b><color=red>{0}</color></b>", shortID[0]);
+        questionText.text = $"<b>Please take off the headset to answer questions about the videos you just watched! Remember your ID: <color=red>{shortID[0]}</color></b>";
+
+        Debug.Log("Participant ID: " + ParticipantID);
         queueFirstRound = new Queue<string>(filesFirstRound);
         queueSecondRound = new Queue<string>(filesSecondRound);
+
+        btnL = buttonLeftGO.GetComponentInChildren<PhysicsButton>();
+        btnR = buttonRightGO.GetComponentInChildren<PhysicsButton>();
+        btnN = buttonNextGO.GetComponentInChildren<PhysicsButton>();
+        btnBegin = buttonBeginGO.GetComponentInChildren<PhysicsButton>();
+        btnEnd = buttonEndGO.GetComponentInChildren<PhysicsButton>();
+        btnHeight = buttonHeightGO.GetComponentInChildren<PhysicsButton>();
+
+        //Debug.Log(btnL + " " + btnR + " " + btnN + " " +  btnBegin + " " + btnEnd + " " + btnHeight);
 
         // do this in RecorderReplayer itself!
         //recRep.path = Path.Combine(Application.streamingAssetsPath, "recordings");
         //Debug.Log("Overwrite RecorderReplayer path to recordings: " + recRep.path);
 
         experimentData = new ExperimentData();
-        
+
+        experimentData.distance = playerPosition.distanceFromReplays; // log which distance this user had from the replays
         experimentData.participantID = ParticipantID;
         // the response is not known here but we will set it once we do 
         uploader.OnUploadSuccessful += Uploader_OnUploadSuccessful;
@@ -260,36 +289,65 @@ public class AvatarExperiment : MonoBehaviour
         responseSelected = true;
     }
 
+    public void ResponseButtonPressed(PhysicsButton.Buttons button)
+    {
+        switch(button)
+        {
+            case PhysicsButton.Buttons.LeftButton:
+                Debug.Log("First button selected!");
+                userResponse.userSelection = 1;
+                break;
+            case PhysicsButton.Buttons.RightButton:
+                Debug.Log("Second button selected!");
+                userResponse.userSelection = 2;
+                break;
+        }
+        responseSelected = true;
+    }
+
     public IEnumerator StudyProcedureCoroutine()
     {
         ROUND = 1;
         // first panel is consent panel, we wait until consent is given then we can switch to height adjustment panel
-        yield return new WaitUntil(() => consentGiven);
-        SwitchPanel(heightAdjustmentPanel);
+        //yield return new WaitUntil(() => consentGiven);
+        //SwitchPanel(heightAdjustmentPanel);
+        buttonHeightGO.SetActive(true);
         yield return new WaitUntil(() => adjustHeight);
         AvatarHeightAdjustment aha = GetComponent<AvatarHeightAdjustment>();
         yield return aha.WaitTakeMeasurementAndFade(2, 3);
+        btnHeight.ResetButtonPress();
+        buttonHeightGO.SetActive(false);
         SwitchPanel(introductionPanel);
-        
-        // when clicking 'Begin' canvas gets disabled
+        playerPosition.UpdateUIPosition(); // make it a bit higher than before height adjustment
+        buttonBeginGO.SetActive(true);
+        // when pressing 'Begin button' canvas gets disabled
+
         yield return new WaitUntil(() => !canvas.enabled);
         logger.LogVideoPanelSwitch(); // i know there are no videos, but it is basically the same
+        yield return new WaitForSeconds(1);
+        btnBegin.ResetButtonPress();
+        buttonBeginGO.SetActive(false);
+
         ///////////////////////////////////////////
         // ROUND 1
         ///////////////////////////////////////////
         while (queueFirstRound.Count > 0)
         {
+            if (canvas.enabled)
+                DisableCanvas();
             // FIRST REPLAY
+            var texPos = raycasting.Dequeue(1);
             var firstReplay = queueFirstRound.Dequeue();
             yield return LoadReplay(firstReplay);
             yield return new WaitUntil(() => replayLoaded);
             replayLoaded = false;
             promptText.text = watchFirstVid;
-            yield return FadeText(fadeTime, promptText);
+            yield return ShowTextForSeconds(fadeTime, promptText);//yield return FadeText(fadeTime, promptText);
             raycasting.RaycastingEnabled(true);
             recRep.menuRecRep.PlayPauseReplay();
             // wait for the replay to be played almost to the end pause and delete the replay
             yield return new WaitUntil(() => recRep.currentReplayFrame >= maxFrame - 10);
+            var raycastInfo1 = raycasting.GetRaycastInfo();
             raycasting.RaycastingEnabled(false);
             recRep.menuRecRep.PlayPauseReplay();
             yield return new WaitForSeconds(0.5f);
@@ -301,26 +359,37 @@ public class AvatarExperiment : MonoBehaviour
             yield return new WaitUntil(() => replayLoaded);
             replayLoaded = false;
             promptText.text = watchSecondVid;
-            yield return FadeText(fadeTime, promptText);
+            yield return ShowTextForSeconds(fadeTime, promptText);//yield return FadeText(fadeTime, promptText);
             raycasting.RaycastingEnabled(true);
             recRep.menuRecRep.PlayPauseReplay();
             yield return new WaitUntil(() => recRep.currentReplayFrame >= maxFrame - 10);
+            var raycastInfo2 = raycasting.GetRaycastInfo();
             raycasting.RaycastingEnabled(false);
             recRep.menuRecRep.PlayPauseReplay();
             yield return new WaitForSeconds(0.5f);
             recRep.menuRecRep.ToggleReplay();
             yield return new WaitUntil(() => replayCleanedUp);
 
-            EnableCnavas();
             SwitchPanel(selectionPanel);
+            EnableCnavas();
+            buttonLeftGO.SetActive(true);
+            buttonRightGO.SetActive(true);
             logger.LogSelectionPanelSwitch();
             progressBar.UpdateProgress();
 
-            userResponse = new UserResponse(ROUND, -1, firstReplay, secondReplay);
+            raycastInfo1.texPos = texPos;
+            raycastInfo2.texPos = texPos;
+            userResponse = new UserResponse(ROUND, -1, firstReplay, secondReplay, raycastInfo1, raycastInfo2);
             yield return new WaitUntil(() => responseSelected);
             responseSelected = false;
             Debug.Log("user response: " + JsonUtility.ToJson(userResponse));
             experimentData.videoResponses.Add(userResponse);
+
+            yield return new WaitForSeconds(1);
+            btnL.ResetButtonPress();
+            btnR.ResetButtonPress();
+            buttonLeftGO.SetActive(false);
+            buttonRightGO.SetActive(false);
         }
 
         SwitchPanel(questionPanel); // question screen
@@ -328,11 +397,18 @@ public class AvatarExperiment : MonoBehaviour
         logger.LogQuestionPanelSwitch(ROUND);
         yield return new WaitForSeconds(waitForSeconds); // wait for 1 minute until button gets enabled! so participants cannot accidentaly continue
         nextButton.interactable = true;
+        buttonNextGO.SetActive(true);
         yield return new WaitUntil(() => gotoNextPanel);
-        SwitchPanel(questionnairePanel); // set 1: attention check panel
-        progressBar.UpdateProgress();
-        logger.LogQuestionnairePanelSwitch();
-        yield return new WaitUntil(() => allQuestionsAnswered); // panel switch to revelation panel automaticaly
+        //SwitchPanel(questionnairePanel); // set 1: attention check panel
+        //progressBar.UpdateProgress();
+        //logger.LogQuestionnairePanelSwitch();
+        //yield return new WaitUntil(() => allQuestionsAnswered); // panel switch to revelation panel automaticaly
+        yield return new WaitForSeconds(2);
+        btnN.ResetButtonPress();
+        buttonNextGO.SetActive(false);
+        SwitchPanel(revelationPanel);
+        yield return new WaitForSeconds(1);
+        buttonBeginGO.SetActive(true);
 
         firstButtonText.text = "1 actor";
         secondButtonText.text = "2 actors";
@@ -344,52 +420,67 @@ public class AvatarExperiment : MonoBehaviour
         // START ROUND 2 and DISABLE CANVAS ON BUTTON CLICK
         yield return new WaitUntil(() => !canvas.enabled);
         logger.LogVideoPanelSwitch();
+        yield return new WaitForSeconds(2);
+        btnBegin.ResetButtonPress();
+        buttonBeginGO.SetActive(false);
 
-        while(queueSecondRound.Count > 0)
+        while (queueSecondRound.Count > 0)
         {
+            if (canvas.enabled)
+                DisableCanvas();
             var replay = queueSecondRound.Dequeue();
+            var texPos = raycasting.Dequeue(2);
             yield return LoadReplay(replay);
             yield return new WaitUntil(() => replayLoaded);
             replayLoaded = false;
             promptText.text = watchMixedVid;
-            yield return FadeText(fadeTime, promptText);
+            yield return ShowTextForSeconds(fadeTime, promptText);//yield return FadeText(fadeTime, promptText);
             raycasting.RaycastingEnabled(true);
             recRep.menuRecRep.PlayPauseReplay();
             // wait for the replay to be played almost to the end pause and delete the replay
             yield return new WaitUntil(() => recRep.currentReplayFrame >= maxFrame - 10);
+            var raycastInfo1 = raycasting.GetRaycastInfo();
             raycasting.RaycastingEnabled(false);
             recRep.menuRecRep.PlayPauseReplay();
             yield return new WaitForSeconds(0.5f);
             recRep.menuRecRep.ToggleReplay();
             yield return new WaitUntil(() => replayCleanedUp);
 
-            EnableCnavas();
             SwitchPanel(selectionPanel);
+            EnableCnavas();
+            buttonLeftGO.SetActive(true);
+            buttonRightGO.SetActive(true);
             progressBar.UpdateProgress();
             logger.LogSelectionPanelSwitch();
-            userResponse = new UserResponse(ROUND, -1, replay, "");
+            raycastInfo1.texPos = texPos;
+            userResponse = new UserResponse(ROUND, -1, replay, "", raycastInfo1, null); // second list is empty because we only have one replay
             yield return new WaitUntil(() => responseSelected);
             responseSelected = false;
             experimentData.videoResponses.Add(userResponse);
+            yield return new WaitForSeconds(1);
+            btnL.ResetButtonPress();
+            btnR.ResetButtonPress();
+            buttonLeftGO.SetActive(false);
+            buttonRightGO.SetActive(false);
         }
 
-        SwitchPanel(questionPanel); // question screen
-        progressBar.UpdateProgress();
-        logger.LogQuestionPanelSwitch(ROUND);
-        yield return new WaitForSeconds(waitForSeconds); // wait for 1 minute until button gets enabled! so participants cannot accidentaly continue
-        nextButton.interactable = true;
-        yield return new WaitUntil(() => gotoNextPanel);
-        gotoNextPanel = false;
-        logger.LogQuestionnairePanelSwitch();
-        SwitchPanel(questionnairePanel); // set 2: gender, age, game, vr questions
+        //SwitchPanel(questionPanel); // question screen
+        //progressBar.UpdateProgress();
+        //logger.LogQuestionPanelSwitch(ROUND);
+        //yield return new WaitForSeconds(waitForSeconds/3); // wait for 20 seconds until button gets enabled! so participants cannot accidentaly continue
+        //nextButton.interactable = true;
+        //yield return new WaitUntil(() => gotoNextPanel);
+        //gotoNextPanel = false;
+        //logger.LogQuestionnairePanelSwitch();
+        //SwitchPanel(questionnairePanel); // set 2: gender, age, game, vr questions
         // questionnaires (set 2 and 3)
-        progressBar.UpdateProgress();
-        yield return new WaitUntil(() => allQuestionsAnswered); // switches automatically to last set with about and feedback question
-        logger.LogQuestionnairePanelSwitch();
-        yield return new WaitForSeconds(waitForSeconds); // wait for 1 minute until button gets enabled! so participants cannot accidentaly continue
+        //progressBar.UpdateProgress();
+        //yield return new WaitUntil(() => allQuestionsAnswered); // switches automatically to last set with about and feedback question
+        //logger.LogQuestionnairePanelSwitch();
+        //yield return new WaitForSeconds(waitForSeconds); // wait for 1 minute until button gets enabled! so participants cannot accidentaly continue
 
         // end and data upload
-        yield return new WaitUntil(() => gotoNextPanel);
+        //yield return new WaitUntil(() => gotoNextPanel);
         // log finish panel switch and get event records for uploading
         logger.LogFinishPanelSwitch();
         experimentData.eventRecords = logger.GetEventRecords();
@@ -398,12 +489,12 @@ public class AvatarExperiment : MonoBehaviour
         resultsUploadedText.color = opaque;
         resultsUploadedText.text = "Uploading in progress! Do NOT quit!";
         // send all the data to the server AND also store it locally (just in case)
-        File.WriteAllText(Application.persistentDataPath + "/ParticipantData/" + ParticipantID + ".txt", JsonUtility.ToJson(experimentData, true));
+        File.WriteAllText(Application.persistentDataPath + "/ParticipantData/" + ParticipantID + ".json", JsonUtility.ToJson(experimentData, true));
         uploader.Send(experimentData);
 
-        // after optional feedback switch to finish panel
         progressBar.UpdateProgress();
         SwitchPanel(finishPanel);
+        buttonEndGO.SetActive(true);
 
         yield return null;
     }
@@ -516,7 +607,7 @@ public class AvatarExperiment : MonoBehaviour
         // show upload successful text 
         //Color c = resultsUploadedText.color;
         //Color opaque = new Color(c.r, c.g, c.b, 1);
-        resultsUploadedText.text = "Experiment results uploaded successfully! You can exit the application now! Thank you!";
+        resultsUploadedText.text = "Experiment results uploaded successfully!";
         resultsUploadedText.color = Color.green;
 
         // enable finish button
@@ -541,6 +632,14 @@ public class AvatarExperiment : MonoBehaviour
         currentPanel = newPanel;
     }
    
+    public IEnumerator ShowTextForSeconds(float s, Text t)
+    {
+        promptCanvas.enabled = true;
+        t.color = new Color(t.color.r, t.color.g, t.color.b, 1);
+        yield return new WaitForSeconds(s);
+        promptCanvas.enabled = false;
+    }
+
     public IEnumerator FadeText(float t, Text i)
     {
         i.color = new Color(i.color.r, i.color.g, i.color.b, 1);
