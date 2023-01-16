@@ -507,11 +507,15 @@ public class Replayer
         if (File.Exists(filepath))
         {
             Debug.Log("Load info...");
-            Color opaque = recRep.loadingInfoText.color;
-            opaque.a = 1.0f;
-            Debug.Log("Color: " + opaque.ToString());
-            recRep.loadingInfoText.color = opaque;
-            recRep.loadingInfoText.text = "Loading...";
+            if (recRep.experiment.mode != ReplayMode.Presentation)
+            {
+                Color opaque = recRep.loadingInfoText.color;
+                opaque.a = 1.0f;
+                Debug.Log("Color: " + opaque.ToString());
+                recRep.loadingInfoText.color = opaque;
+                recRep.loadingInfoText.text = "Loading...";
+            }
+            
             recInfo = await LoadRecInfo(filepath);
             OnLoadingReplay.Invoke(this, recInfo);
 

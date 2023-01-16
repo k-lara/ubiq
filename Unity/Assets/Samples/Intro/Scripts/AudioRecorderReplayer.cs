@@ -756,8 +756,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             Debug.Log("Finished reading audio data!");
             if (recRep.experiment.mode == ReplayMode.Presentation)
             {
-                recRep.loadingInfoText.text = "Loading finished!";
-                recRep.loadingInfoText.color = Color.clear;
+                //recRep.loadingInfoText.text = "Loading finished!";
+                //recRep.loadingInfoText.color = Color.clear;
             }
             else
             {
