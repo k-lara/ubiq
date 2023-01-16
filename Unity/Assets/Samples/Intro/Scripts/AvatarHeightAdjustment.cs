@@ -11,7 +11,9 @@ public class AvatarHeightAdjustment : MonoBehaviour
     public GameObject player;
     public Camera mainCamera;
     public Button button;
+    public Canvas canvas;
     public Text infoText;
+    public bool withFade;
 
     public void OnButtonPress() // on button press
     {
@@ -31,31 +33,42 @@ public class AvatarHeightAdjustment : MonoBehaviour
 
     public IEnumerator WaitTakeMeasurementAndFade(float fade, float wait)
     {
+        canvas.enabled = true;
         button.interactable = false;
         infoText.color = new Color(infoText.color.r, infoText.color.g, infoText.color.b, 1);
         infoText.text = "Measuring height...\nPlease stand straight and still!";
         yield return new WaitForSeconds(wait);
         Debug.Log("Waited " + wait + "seconds!");
         SetOffset();
-        while (infoText.color.a > 0.0f)
+        if (withFade)
         {
-            infoText.color = new Color(infoText.color.r, infoText.color.g, infoText.color.b, infoText.color.a - (Time.deltaTime / fade));
-            yield return null;
+            while (infoText.color.a > 0.0f)
+            {
+                infoText.color = new Color(infoText.color.r, infoText.color.g, infoText.color.b, infoText.color.a - (Time.deltaTime / fade));
+                yield return null;
+            }
+            infoText.text = "Measurements done!";
+            infoText.color = new Color(infoText.color.r, infoText.color.g, infoText.color.b, 1);
+        
+            while (infoText.color.a > 0.0f)
+            {
+                infoText.color = new Color(infoText.color.r, infoText.color.g, infoText.color.b, infoText.color.a - (Time.deltaTime / fade));
+                yield return null;
+            }
         }
-        infoText.text = "Measurements done!";
-        infoText.color = new Color(infoText.color.r, infoText.color.g, infoText.color.b, 1);
-        while (infoText.color.a > 0.0f)
+        else
         {
-            infoText.color = new Color(infoText.color.r, infoText.color.g, infoText.color.b, infoText.color.a - (Time.deltaTime / fade));
-            yield return null;
+            infoText.text = "Measurements done!";
+            yield return new WaitForSeconds(wait);
+
         }
         button.interactable = true;
+        canvas.enabled = false;
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        
     }
 
 }
