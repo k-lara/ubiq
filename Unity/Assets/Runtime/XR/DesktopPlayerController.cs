@@ -146,8 +146,8 @@ namespace Ubiq.XR
             if (UnityEngine.XR.XRSettings.isDeviceActive)
             {
                 enabled = false;
-                transform.localEulerAngles = Vector3.zero;
-                cameraContainer.localEulerAngles = Vector3.zero;
+                //transform.localEulerAngles = Vector3.zero;
+                //cameraContainer.localEulerAngles = Vector3.zero;
             }
 
             OnMouse();
