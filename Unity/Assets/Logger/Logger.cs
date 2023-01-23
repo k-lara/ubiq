@@ -87,6 +87,11 @@ public class Logger : MonoBehaviour
         return m_experiment.eventRecords;
     }
 
+    public List<TelemetryRecord> GetTelemetryRecords()
+    {
+        return m_experiment.telemetryRecords;
+    }
+
     // Use this for initialization
     void Start()
     {
@@ -119,26 +124,26 @@ public class Logger : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // log telemetry in regular intervals
-        //if (m_lastLogTime + logIntervals < Time.time)
-        //{
+        //log telemetry in regular intervals
+        if (m_lastLogTime + logIntervals < Time.time)
+        {
 
-        //    // Check if the logger is running at the moment. If not, we do nothing
-        //    if (m_loggerRunning)
-        //    {
-        //        switch (loggingMode)
-        //        {
-        //            case LoggingMode.local:
-        //                LogTelemetryLocal();
-        //                break;
-        //            case LoggingMode.online:
-        //                LogTelemetryOnline();
-        //                break;
-        //        }
-        //    }
+            // Check if the logger is running at the moment. If not, we do nothing
+            if (m_loggerRunning)
+            {
+                switch (loggingMode)
+                {
+                    case LoggingMode.local:
+                        LogTelemetryLocal();
+                        break;
+                    case LoggingMode.online:
+                        LogTelemetryOnline();
+                        break;
+                }
+            }
 
-        //    m_lastLogTime = Time.time;
-        //}
+            m_lastLogTime = Time.time;
+        }
     }
 
     #region duplication check
