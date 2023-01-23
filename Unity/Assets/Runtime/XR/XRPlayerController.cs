@@ -10,6 +10,7 @@ namespace Ubiq.XR
     public class XRPlayerController : MonoBehaviour
     {
         public bool dontDestroyOnLoad = true;
+        public bool joystickMovementEnabled;
 
         private static GameObject singleton;
 
@@ -64,7 +65,7 @@ namespace Ubiq.XR
             {
                 if (item.Left)
                 {
-                    item.JoystickPress.AddListener(RotateCamera);
+                    //item.JoystickPress.AddListener(RotateCamera);
                 }
             }
         }
@@ -124,7 +125,7 @@ namespace Ubiq.XR
                         //transform.RotateAround(headCamera.transform.position, Vector3.up, 45f * Mathf.Sign(item.JoystickSwipe.Value));
                     }
                 }
-                else if (item.Left)
+                else if (item.Left && joystickMovementEnabled)
                 {
                     var dir = item.Joystick.normalized;
                     var mag = item.Joystick.magnitude;
