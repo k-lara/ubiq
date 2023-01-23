@@ -2,24 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Recorder;
 using UnityEditor.Recorder.Input;
+#endif
 using Ubiq.Avatars;
 using Ubiq.Samples;
-
-/// <summary>
-/// Need all the recordings (and postprocessed audio files)
-/// load audio separately this time as it has to be processed
-/// Shuffle them in random order, save which one is which
-/// Save responses of users in an extra file
-/// save times when they clicked on a button (decided which avatar to take) in responses file
-/// record user while they are doing what they are doing
-/// 
-/// flip recordings so users don't notice that they have seen things twice
-/// do different voice overs for the same recordings?
-/// </summary>
-///
 
 // overall settings for experiment either single or multi user or actual study (presentation) view
 public enum ReplayMode
@@ -72,9 +61,11 @@ public class ExperimentSettings : MonoBehaviour
 
     private List<Recording> recordings;
 
+# if UNITY_EDITOR
     private RecorderControllerSettings controllerSettings;
     private RecorderController recorderController;
     private MovieRecorderSettings videoRecorder;
+# endif
 
     [HideInInspector] public bool visible = true;
 
@@ -135,6 +126,7 @@ public class ExperimentSettings : MonoBehaviour
 
     }
 
+# if UNITY_EDITOR
     public IEnumerator CreateVideosFromRecordings()
     {
         Debug.Log("Wait a little...");
@@ -156,7 +148,6 @@ public class ExperimentSettings : MonoBehaviour
                 //Debug.Log(maxFrame);
 
                 videoRecorder.OutputFile = pathToVideos + "/" + DefaultWildcard.Take;
-
                 // start the replay
                 recRep.menuRecRep.PlayPauseReplay();
                 // start the video recording
@@ -189,6 +180,7 @@ public class ExperimentSettings : MonoBehaviour
         }
 
     }
+# endif
 
     // param: number of the recording in the list of recordings
     // sets the replay file name and loads the respective recording
