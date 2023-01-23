@@ -154,11 +154,11 @@ public class PlayerRaycasting : MonoBehaviour
 
             Texture2D tex = rend.material.mainTexture as Texture2D;
             Vector2 pixelUV = hit.textureCoord;
-            
+            //Debug.Log(pixelUV.x + " " + pixelUV.y);
             pixelUV.x *= tex.width;
             pixelUV.y *= tex.height;
             UVs.Add(new UVCoordinates(pixelUV.x, pixelUV.y, tex.name));
-            Debug.Log(tex.name);
+            //Debug.Log(pixelUV.x + " " + pixelUV.y + " " + tex.name);
             //tex.SetPixel((int)pixelUV.x, (int)pixelUV.y, Color.black);
             //tex.Apply();
         }
@@ -166,6 +166,7 @@ public class PlayerRaycasting : MonoBehaviour
         {
             if (UVs.Count > 0)
             {
+                //Debug.Log("Clear UV list");
                 Frames = 0;
                 UVs.Clear();
             }
