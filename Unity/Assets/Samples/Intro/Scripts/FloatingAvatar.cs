@@ -1,6 +1,6 @@
 ﻿using Ubiq.Avatars;
 using UnityEngine;
-using System.Collections.Generic;
+using System.Collections;
 using Ubiq.Messaging;
 
 namespace Ubiq.Samples
@@ -22,6 +22,15 @@ namespace Ubiq.Samples
         public Renderer leftHandRenderer;
         public Renderer rightHandRenderer;
 
+        private Message firstPoseHead, secondPoseHead, firstPoseLeft, secondPoseLeft, firstPoseRight, secondPoseRight;
+        private Message[] currentPosesHead;
+        private Message[] currentPosesLeft;
+        private Message[] currentPosesRight;
+        private float intervalStartTime;
+        private float currentTime;
+        private float intervalLength = 0.1f; // 100 ms (same as in WebGL study) 
+        private bool startSmoothing = false;
+
         public Transform baseOfNeckHint;
 
         // public float torsoFacingHandsWeight;
@@ -40,31 +49,18 @@ namespace Ubiq.Samples
         private NetworkScene scene;
         private RecorderReplayer recRep;
         public bool firstMessage = false;
+        private bool firstMessageLeft = false;
+        private bool firstMessageRight = false;
 
         public class Message
         {
             public Vector3 position;
             public Quaternion rotation;
-            public int frame;
             public float time;
         }
 
-
-        private Queue<Message> headMessages;
-        private Queue<Message> leftHandMessages;
-        private Queue<Message> rightHandMessages;
-        private float headStartTime = 0.0f;
-        private float leftHandStartTime = 0.0f;
-        private float rightHandStartTime = 0.0f;
-        private Message headStart, headEnd, lefHandStart, leftHandEnd, rightHandStart, rightHandEnd;
-        private float headTimeDiff, leftHandTimeDiff, rightHandTimeDiff = 0.0f;
-
         private void Awake()
         {
-            headMessages = new Queue<Message>();
-            leftHandMessages = new Queue<Message>();
-            rightHandMessages = new Queue<Message>();
-
             avatar = GetComponent<Avatars.Avatar>();
             trackedAvatar = GetComponent<ThreePointTrackedAvatar>();
             scene = NetworkScene.FindNetworkScene(this);
@@ -96,131 +92,21 @@ namespace Ubiq.Samples
             {
                 texturedAvatar.OnTextureChanged.RemoveListener(TexturedAvatar_OnTextureChanged);
             }
-        }
+        }      
 
-        private int inbetween = 0;
-        private float increment = 0.0f;
-        private float t = 0.0f;
-        private bool init = false;
-        // smoothen during update
-        private void SmoothenMovements()
-        {
-            // check if we have already two points between which we can interpolate
-            if (inbetween > 1)
-            {
-
-                head.position = Vector3.Lerp(headStart.position, headEnd.position, t);
-                head.rotation = Quaternion.Lerp(headStart.rotation, headEnd.rotation, t); // or should I use Slerp (slower but looks nicer?)
-                inbetween--;
-                t = t + increment;
-            }
-            else // no frames inbetween 
-            {
-                if (headMessages.Count >= 1)
-                {
-                    if (!init)
-                    {
-                        if (headMessages.Count >= 2)
-                        {
-                            headStart = headMessages.Dequeue();
-                            init = true;
-                        }
-                    }
-                    else
-                    {
-                        headStart = headEnd;
-                    }
-
-                    if (init)
-                    {
-                        headEnd = headMessages.Dequeue();
-                        inbetween = headEnd.frame - headStart.frame;
-                        increment = 1 / inbetween;
-                        t = increment;
-
-                        // set start transform
-                        head.position = headStart.position;
-                        head.rotation = headStart.rotation;
-                        inbetween--;
-                    }
-                }
-            }
-
-            //if(headStart == null && headMessages.Count >= 2)
-            //{
-            //    // get two points to start interpolating
-            //    if (!init)
-            //    {
-            //        headStart = headMessages.Dequeue();
-            //        init = true;
-            //    }
-            //    else
-            //    {
-            //        headStart = headEnd;
-            //    }
-            //    headEnd = headMessages.Dequeue();
-            //    headStartTime = Time.unscaledTime;
-            //    headTimeDiff = headEnd.time -  headStart.time;
-                
-            //}
-            //if (headStart != null && headEnd != null)
-            //{
-            //    // time advances since start point
-            //    var t = (Time.unscaledTime - headStartTime) / headTimeDiff;
-            //    Debug.Log("time : " + t + " " + (Time.unscaledTime - headStartTime) +  " head start time: " + headStartTime + " diff: " + headTimeDiff);
-            //    if (t <= 1)
-            //    {
-            //        head.position = Vector3.Lerp(headStart.position, headEnd.position, t);
-            //        head.rotation = Quaternion.Lerp(headStart.rotation, headEnd.rotation, t); // or should I use Slerp (slower but looks nicer?)
-            //    }
-            //    else // t is already in the next interval so get the next point and interpolate between previous end and next point
-            //    {
-            //        if (headMessages.Count > 0)
-            //        {
-            //            headStart = headEnd;
-            //            headEnd = headMessages.Dequeue();
-            //            // calculate where next interval would have started: current time
-            //            headStartTime = headStartTime + headTimeDiff;
-            //            headTimeDiff = headEnd.time - headStart.time;
-
-            //            // with updated startTime and timeDiff
-            //            t = (Time.unscaledTime - headStartTime) / headTimeDiff;
-            //            head.position = Vector3.Lerp(headStart.position, headEnd.position, t);
-            //            head.rotation = Quaternion.Lerp(headStart.rotation, headEnd.rotation, t);
-            //        }
-            //    }
-            //}
-        }
-
-        private float startTime = 0.0f;
-        Message firstMsg;
-        private bool saveFirst = false;
         private void ThreePointTrackedAvatar_OnHeadUpdate(Vector3 pos, Quaternion rot)
         {
-            // if multiple messages arrive in one frame take the last one that came
-            Message msg = new Message() { position = pos, rotation = rot, frame = Time.frameCount, time = Time.unscaledTime };
-            //Debug.Log(avatar.IsLocal + " " + avatar.Id + " " + lastFrameHead + " " + Time.frameCount);
-
             if (!avatar.IsLocal)
             {
-                if (!saveFirst)
-                {
-                    firstMsg = msg;
-                    startTime = Time.unscaledTime;
-                    saveFirst = true;
-                }
+                // if multiple messages arrive in one frame take the last one that came
+                if (firstPoseHead != null)
+                    secondPoseHead = new Message() { position = pos, rotation = rot, time = Time.unscaledTime};
+                //Debug.Log(avatar.IsLocal + " " + avatar.Id + " " + lastFrameHead + " " + Time.frameCount);
 
-                if ((Time.unscaledTime - startTime) >= 0.1)
-                {
-                    head.position = Vector3.Lerp(firstMsg.position, pos, 0.5f);
-                    head.rotation = Quaternion.Lerp(firstMsg.rotation, rot, 0.05f);
-
-
-                    saveFirst = false;
-                }
                 // this is to make sure that the torso is at the correct position and is not dragged after the head
                 if (recRep.replaying && !firstMessage)
                 {
+                    firstPoseHead = new Message() { position = pos, rotation = rot, time = Time.unscaledTime };
                     head.position = pos;
                     head.rotation = rot;
                     Debug.Log("call: " + baseOfNeckHint.position.ToString());
@@ -237,65 +123,23 @@ namespace Ubiq.Samples
                 head.position = pos;
                 head.rotation = rot;
             }
-
-            //if (lastFrameHead != Time.frameCount)
-            //{
-            //    if (prevHeadMsg != null)
-            //    {
-            //        headMessages.Enqueue(prevHeadMsg);
-            //        //Debug.Log(avatar.IsLocal + " " + avatar.Id + " queue: " + headMessages.Count + " frame: " + Time.frameCount);
-            //    }
-            //}
-
-            //lastFrameHead = Time.frameCount;
-            //prevHeadMsg = msg;
-
-            //if (headMessages.Count == 2)
-            //{
-            //    var pos1 = headMessages.Dequeue();
-            //    var pos2 = headMessages.Dequeue();
-
-            //    head.position = Vector3.Lerp(pos1.position, pos2.position, 0.5f);
-            //    head.rotation = Quaternion.Lerp(pos1.rotation, pos2.rotation, 0.05f);
-            //}
-            //if (!avatar.IsLocal)
-            //{
-            //    Debug.Log(pos.x + " " + avatar.Id + " " + Time.frameCount);
-
-            //}
-
-            //head.position = pos;
-            //head.rotation = rot;
         }
 
-        private float startTimeLeft = 0.0f;
-        Message firstMsgLeft;
-        private bool firstMessageLeft = false;
-        private bool saveFirstLeft = false;
         private void ThreePointTrackedAvatar_OnLeftHandUpdate(Vector3 pos, Quaternion rot)
         {
-            Message msg = new Message() { position = pos, rotation = rot, frame = Time.frameCount, time = Time.unscaledTime };
             if (!avatar.IsLocal)
             {
-                if (!saveFirstLeft)
-                {
-                    firstMsgLeft = msg;
-                    startTimeLeft = Time.unscaledTime;
-                    saveFirstLeft = true;
-                }
-
-                if ((Time.unscaledTime - startTime) >= 0.1)
-                {
-                    leftHand.position = Vector3.Lerp(firstMsgLeft.position, pos, 0.5f);
-                    leftHand.rotation = Quaternion.Lerp(firstMsgLeft.rotation, rot, 0.05f);
-                    saveFirstLeft = false;
-                }
                 if (recRep.replaying && !firstMessageLeft)
                 {
+                    firstPoseLeft = new Message() { position = pos, rotation = rot, time = Time.unscaledTime };
                     leftHand.position = pos;
                     leftHand.rotation = rot;
                     firstMessageLeft = true;
                 }
+
+                if (firstPoseLeft != null)
+                     secondPoseLeft = new Message() { position = pos, rotation = rot, time = Time.unscaledTime };
+
             }  
             else
             {
@@ -303,32 +147,18 @@ namespace Ubiq.Samples
                 leftHand.rotation = rot;
             }
         }
-        private float startTimeRight = 0.0f;
-        private bool firstMessageRight = false;
-        Message firstMsgRight;
-        private bool saveFirstRight = false;
         private void ThreePointTrackedAvatar_OnRightHandUpdate(Vector3 pos, Quaternion rot)
         {
-            Message msg = new Message() { position = pos, rotation = rot, frame = Time.frameCount, time = Time.unscaledTime };
             //Debug.Log(avatar.IsLocal + " " + avatar.Id + " " + lastFrameHead + " " + Time.frameCount);
 
             if (!avatar.IsLocal)
             {
-                if (!saveFirstRight)
-                {
-                    firstMsgRight = msg;
-                    startTimeRight = Time.unscaledTime;
-                    saveFirstRight = true;
-                }
+                if (firstPoseRight != null) 
+                    secondPoseRight = new Message() { position = pos, rotation = rot, time = Time.unscaledTime };
 
-                if ((Time.unscaledTime - startTime) >= 0.1)
-                {
-                    rightHand.position = Vector3.Lerp(firstMsgRight.position, pos, 0.5f);
-                    rightHand.rotation = Quaternion.Lerp(firstMsgRight.rotation, rot, 0.05f);
-                    saveFirstRight = false;
-                }
                 if (recRep.replaying && !firstMessageRight)
                 {
+                    firstPoseRight = new Message() { position = pos, rotation = rot, time = Time.unscaledTime };
                     rightHand.position = pos;
                     rightHand.rotation = rot;
                     firstMessageRight = true;
@@ -349,9 +179,68 @@ namespace Ubiq.Samples
             rightHandRenderer.material = headRenderer.material;
         }
 
+        private void Start()
+        {
+            intervalStartTime = Time.unscaledTime;
+            StartCoroutine(Wait(intervalLength));
+        }
+
+        private IEnumerator Wait(float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            startSmoothing = true;
+        }
+
         private void Update()
         {
-            //SmoothenMovements();
+            // fixed smoothing interval (e.g. 50 ms intervalLenght)
+            if (startSmoothing)
+            {
+                // make sure we already have a second pose for interpolation
+                if (secondPoseHead != null)
+                {
+                    if (currentPosesHead == null) // this is only try for the very first interval
+                    {
+                        currentPosesHead = new Message[] { firstPoseHead, secondPoseHead };
+                        currentPosesLeft = new Message[] { firstPoseLeft, secondPoseLeft };
+                        currentPosesRight = new Message[] { firstPoseRight, secondPoseRight };
+                        
+                        intervalStartTime = Time.unscaledTime;
+                    }
+
+                    currentTime = Time.unscaledTime - intervalStartTime;
+                    // if we are over the interval, we take the next one
+                    if (currentTime > intervalLength)
+                    {
+                        // calculate when next interval would have started
+                        intervalStartTime = Time.unscaledTime - (currentTime - intervalLength);
+                        currentPosesHead[0] = currentPosesHead[1]; currentPosesHead[1] = secondPoseHead;
+                        currentPosesLeft[0] = currentPosesLeft[1]; currentPosesLeft[1] = secondPoseLeft;
+                        currentPosesRight[0] = currentPosesRight[1]; currentPosesRight[1] = secondPoseRight;
+                        
+                        var t = (currentTime - intervalLength) / intervalLength;
+                       
+                        head.position = Vector3.Lerp(currentPosesHead[0].position, currentPosesHead[1].position, t);
+                        head.rotation = Quaternion.Lerp(currentPosesHead[0].rotation, currentPosesHead[1].rotation, t);
+                        leftHand.position = Vector3.Lerp(currentPosesLeft[0].position, currentPosesLeft[1].position, t);
+                        leftHand.rotation = Quaternion.Lerp(currentPosesLeft[0].rotation, currentPosesLeft[1].rotation, t);
+                        rightHand.position = Vector3.Lerp(currentPosesRight[0].position, currentPosesRight[1].position, t);
+                        rightHand.rotation = Quaternion.Lerp(currentPosesRight[0].rotation, currentPosesRight[1].rotation, t);
+                    }
+                    else
+                    {
+                        var t = currentTime / intervalLength;
+                        
+                        head.position = Vector3.Lerp(currentPosesHead[0].position, currentPosesHead[1].position, t);
+                        head.rotation = Quaternion.Lerp(currentPosesHead[0].rotation, currentPosesHead[1].rotation, t);
+                        leftHand.position = Vector3.Lerp(currentPosesLeft[0].position, currentPosesLeft[1].position, t);
+                        leftHand.rotation = Quaternion.Lerp(currentPosesLeft[0].rotation, currentPosesLeft[1].rotation, t);
+                        rightHand.position = Vector3.Lerp(currentPosesRight[0].position, currentPosesRight[1].position, t);
+                        rightHand.rotation = Quaternion.Lerp(currentPosesRight[0].rotation, currentPosesRight[1].rotation, t);
+                    }
+
+                }
+            }
 
             UpdateTorso();
 
