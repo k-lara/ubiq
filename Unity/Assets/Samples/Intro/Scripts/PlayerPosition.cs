@@ -19,7 +19,7 @@ public class PlayerPosition : MonoBehaviour
     private float middle = 2.8f;
     private float far = 2.1f;
 
-    private float UIDistanceFromUser = 0.7f;
+    private float UIDistanceFromUser = 0.8f;
 
     public Transform studyUITransform;
 
@@ -30,7 +30,12 @@ public class PlayerPosition : MonoBehaviour
         near = x - 1f;
         middle = x - 2f;
         far = x - 4f;
-        
+
+        ResetPlayerPosition();
+    }
+
+    public void ResetPlayerPosition()
+    {
         switch (distanceFromReplays)
         {
             case Distances.Near:
@@ -46,7 +51,7 @@ public class PlayerPosition : MonoBehaviour
                 transform.position = new Vector3(2.31f, 0, -1.294f);
                 break;
         }
-        
+
         transform.rotation = Quaternion.Euler(new Vector3(0, 90, 0));
 
         // no matter what distance the user has to the replays, the UI is always in front of the user with the same distance
