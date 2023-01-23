@@ -7,14 +7,17 @@ public class PhysicsButton : MonoBehaviour
 {
     public enum Buttons
     {
-        LeftButton, RightButton, NextButton, BeginButton, EndButton, HeightButton
+        LeftButton, RightButton, NextButton, BeginButton, EndButton, HeightButton,
+        Zero, One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Del
     }
 
     [SerializeField] private Buttons buttonName;
     
-    private float threshold = 0f;
-    private float deadZone = 8f;
+    public float threshold = 0f;
+    public float deadZone = 8f;
     
+    public bool multiPressAllowed = false;
+
     private bool isPressed;
     private bool pressedOnce = false;
     private Vector3 startPos;
@@ -47,7 +50,10 @@ public class PhysicsButton : MonoBehaviour
         if (!pressedOnce)
         {
             isPressed = true;
-            pressedOnce = true;
+            if (!multiPressAllowed)
+            {
+                pressedOnce = true;
+            }
             audio.Play();
 
             onPressed.Invoke(buttonName);
@@ -72,7 +78,7 @@ public class PhysicsButton : MonoBehaviour
     private void Released()
     {
         isPressed = false;
-        onPressed.Invoke(buttonName);
+        onReleased.Invoke(buttonName);
 
         switch (buttonName)
         {
