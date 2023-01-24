@@ -204,6 +204,8 @@ public class AvatarExperiment : MonoBehaviour
         }
     }
 
+    // it only downloads files that are in the first round (but all the files in the first round are also in the second round)
+    // but in different order, so if we only take a subset of the first round, we might not get the same subset of the second round
     private IEnumerator DownloadFiles(string pathFrom, string pathTo)
     {
         for (var i = 0; i < filesFirstRound.Length; i++)
@@ -507,9 +509,10 @@ public class AvatarExperiment : MonoBehaviour
         btnN.ResetButtonPress();
         buttonNextGO.SetActive(false);
 
+        SwitchPanel(heightAdjustmentPanel);
+        adjustHeight = false; // need it to be false for the round 2 height adjustment
         buttonHeightGO.SetActive(true);
         yield return new WaitUntil(() => adjustHeight);
-        adjustHeight = false; // need it to be false for the round 2 height adjustment
         playerPosition.ResetPlayerPosition();
         aha = GetComponent<AvatarHeightAdjustment>();
         yield return aha.WaitTakeMeasurementAndFade(2, 3);

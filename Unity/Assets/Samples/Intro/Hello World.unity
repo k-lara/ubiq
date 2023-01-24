@@ -9434,7 +9434,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d2c1a1bdf6598a4983578927b117ea9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  distanceFromReplays: 3
+  distanceFromReplays: 1
   carpetCenter: {fileID: 725944675}
   studyUITransform: {fileID: 151017248}
 --- !u!1 &669447129
@@ -28874,7 +28874,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 874390025}
   m_Direction: 2
   m_Value: -0.00000006955573
-  m_Size: 0.051302485
+  m_Size: 0.05135135
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

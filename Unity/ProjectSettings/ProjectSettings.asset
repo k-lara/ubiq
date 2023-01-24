@@ -12,8 +12,8 @@ PlayerSettings:
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 60
-  companyName: ucl
-  productName: VRDialoguesStudyF
+  companyName: klara
+  productName: VRDialoguesStudyN
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -135,7 +135,10 @@ PlayerSettings:
     16:9: 1
     Others: 1
   bundleVersion: 0.1.0
-  preloadedAssets: []
+  preloadedAssets:
+  - {fileID: 11400000, guid: 94853b5e64b20ad4ea201d84aa95b8d9, type: 2}
+  - {fileID: 11400000, guid: eeb997262684f8d41858f9c81c6f7f68, type: 2}
+  - {fileID: 4951109614847102012, guid: 6ed61042c7521c8469439103af6e0403, type: 2}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -153,7 +156,7 @@ PlayerSettings:
   androidSupportedAspectRatio: 1
   androidMaxAspectRatio: 2.1
   applicationIdentifier:
-    Android: com.ucl.interactive_recordreplay
+    Android: com.klara.vrstudies
     Standalone: com.ucl.interactive-recordreplay
   buildNumber:
     Standalone: 0
