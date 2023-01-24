@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Ubiq.XR;
+# if !UNITY_WEBGL
 public class JoystickScroll : MonoBehaviour
 {
 
@@ -27,3 +28,4 @@ public class JoystickScroll : MonoBehaviour
         }
     }
 }
+# endif

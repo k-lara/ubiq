@@ -15,9 +15,9 @@ public class PlayerPosition : MonoBehaviour
     public Distances distanceFromReplays;
     public Transform carpetCenter;
 
-    private float near = 3.5f;
-    private float middle = 2.8f;
-    private float far = 2.1f;
+    private float near = 3.5f; // 1
+    private float middle = 2.8f; // 2
+    private float far = 2.1f; // 4
 
     private float UIDistanceFromUser = 0.8f;
 

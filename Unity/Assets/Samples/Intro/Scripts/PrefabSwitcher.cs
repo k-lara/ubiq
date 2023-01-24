@@ -11,7 +11,6 @@ public class PrefabSwitcher : MonoBehaviour
 {
     public SwitchMode mode;
     public AvatarManager manager;
-    public HandController controller;
     public string currentAvatarPrefabUuid;
     public Text info;
     private GameObject currentAvatarPrefab;

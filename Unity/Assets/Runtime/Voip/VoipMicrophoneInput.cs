@@ -8,6 +8,42 @@ using UnityEngine;
 using UnityEngine.Android;
 #endif
 
+// dummy class based on https://github.com/bnco-dev/unity-webgl-microphone/blob/main/Runtime/WebGL/Microphone.cs by amazin bnco
+#if !UNITY_EDITOR && UNITY_WEBGL
+namespace UnityEngine
+{
+    public static class Microphone
+    {
+        private static string[] _devices = {};
+        public static string[] devices { get { return _devices; } }
+
+        public static void GetDeviceCaps(string deviceName, out int minFreq, out int maxFreq)
+        {
+            minFreq = maxFreq = 0;
+        }
+
+        public static int GetPosition(string deviceName)
+        {
+            return 0;
+        }
+
+        public static bool IsRecording(string deviceName)
+        {
+            return false;
+        }
+
+        public static AudioClip Start(string deviceName, bool loop, int lengthSec, int frequency)
+        {
+            return null;
+        }
+
+        public static void End(string deviceName)
+        {
+        }
+    }
+}
+# endif
+
 namespace Ubiq.Voip
 {
     // Uses the Unity Microphone API to provide audio to any number of peer connections

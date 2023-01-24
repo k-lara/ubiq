@@ -19,8 +19,6 @@ public class Marker : MonoBehaviour
 
     public RecorderReplayer recRep;
     public AvatarManager manager;
-    public HandController leftController;
-    public HandController rightController;
     public Text info;
 
 

@@ -13,7 +13,6 @@ using Ubiq.Avatars;
 using Ubiq.Spawning;
 using Ubiq.Samples;
 
-
 //[RequireComponent(typeof(RecorderReplayer))]
 public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComponent
 {
