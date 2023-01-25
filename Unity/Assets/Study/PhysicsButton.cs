@@ -54,7 +54,11 @@ public class PhysicsButton : MonoBehaviour
             {
                 pressedOnce = true;
             }
-            audio.Play();
+            
+            if (buttonName != Buttons.EndButton) // otherwise audio is clipped when ending the application
+            {
+                audio.Play();
+            }
 
             onPressed.Invoke(buttonName);
             switch(buttonName)
