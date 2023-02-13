@@ -502,7 +502,7 @@ public class AvatarExperiment : MonoBehaviour
 
         SwitchPanel(questionPanel); // question screen (take headset off)
         logger.LogQuestionPanelSwitch(ROUND);
-        yield return new WaitForSeconds(60); // wait for 1 minute until button gets enabled! so participants cannot accidentaly continue
+        yield return new WaitForSeconds(10); // wait for 1 minute (too long as pico goes to sleep) until button gets enabled! so participants cannot accidentaly continue
         buttonNextGO.SetActive(true);
         yield return new WaitUntil(() => gotoNextPanel);
         yield return new WaitForSeconds(2);
