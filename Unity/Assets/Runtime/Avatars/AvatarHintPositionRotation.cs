@@ -50,6 +50,7 @@ namespace Ubiq.Avatars
     public class AvatarHintPositionRotation : MonoBehaviour, IAvatarHintProvider<PositionRotation>
     {
         public AvatarHints.NodePosRot node;
+        public Transform otherTransform; // provide pose from somewhere else
 
         void OnEnable ()
         {
@@ -62,8 +63,17 @@ namespace Ubiq.Avatars
         }
 
         public PositionRotation Provide()
-        {
-            return new PositionRotation (transform);
+        {   
+            if (otherTransform == null)
+            {
+                // Debug.Log("Provide own");
+                return new PositionRotation (transform);
+            }
+            else
+            {
+                // Debug.Log("Provide other");
+                return new PositionRotation(otherTransform);
+            }
         }
     }
 

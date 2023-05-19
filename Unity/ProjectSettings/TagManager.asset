@@ -12,6 +12,8 @@ TagManager:
   - Second
   - Q1
   - First
+  - TapeAttachment
+  - VRButton
   layers:
   - Default
   - TransparentFX

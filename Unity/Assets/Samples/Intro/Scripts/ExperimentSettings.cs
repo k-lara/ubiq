@@ -31,34 +31,6 @@ public class ExperimentSettings : MonoBehaviour
     //private string pathToRecordings = "C:/Users/klara/PhD/Projects/ubiqFork/DialoguesDataset/TRANSFORMED/SELECTED/Round2";
     private string pathToVideos = "C:/Users/klara/PhD/Projects/ubiqFork/Unity/Recordings/SELECTED_videos/Round1";
 
-    private string[] allFiles = new string[]{
-        ////// FIRST ROUND //////
-        "rec01r1", "rec01n",
-        "rec02r2", "rec02b",
-        "rec03n", "rec03r2",
-        "rec04b", "rec04r1",
-        "rec05r2", "rec05n",
-        "rec06b", "rec06r2",
-        "rec02n", "rec02r1",
-        "rec03r1", "rec03b",
-        "rec04n", "rec04r2",
-        "rec05b", "rec05r1",
-        "rec06r1", "rec06n",
-        "rec01r2", "rec01b",
-        ////// SECOND ROUND //////
-        "rec01b","rec02r1",
-        "rec03r1","rec04n",
-        "rec05r2","rec02b",
-        "rec06n","rec03r2",
-        "rec05r1","rec04b",
-        "rec06r2","rec02n",
-        "rec05b","rec01r2",
-        "rec03n","rec04r1",
-        "rec02r2","rec06b",
-        "rec01n","rec04r2",
-        "rec03b","rec01r1",
-        "rec06r1","rec05n"};
-
     private List<Recording> recordings;
 
 # if UNITY_EDITOR

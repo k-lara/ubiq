@@ -77,6 +77,7 @@ public class Recorder
     {
         if (!initFile)
         {
+            Debug.Log("Init Recording File...");
             //var dateTime = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
             recRep.recordFile = recRep.path + "/rec" + recRep.recordingStartTimeString + ".dat";
             recordFileIDs = recRep.path + "/IDsrec" + recRep.recordingStartTimeString + ".txt";
@@ -459,8 +460,9 @@ public class Replayer
                 }
             }
             else
-            { 
-                go = spawner.SpawnPersistentReplay(prefab, false, uid, true, new TransformMessage(recRep.thisTransform));
+            {
+                // set outline to false, as we haven't used it in the past
+                go = spawner.SpawnPersistentReplay(prefab, false, uid, false, new TransformMessage(recRep.thisTransform));
                 
                 if (go.TryGetComponent(out Avatar a))
                 {
@@ -555,7 +557,10 @@ public class Replayer
         
         if (loaded)
         {
-            OnReplayLoaded.Invoke(this, EventArgs.Empty);
+            if (OnReplayLoaded != null)
+            {
+                OnReplayLoaded.Invoke(this, EventArgs.Empty);
+            }
         }
         // for automated replay (this is an older version)
         //if (loaded && recRep.automatedReplay)
@@ -755,7 +760,11 @@ public class Replayer
         if (streamFromFile != null)
             streamFromFile.Close();
 
-        OnReplayCleanedUp.Invoke(this, EventArgs.Empty);
+        if(OnReplayCleanedUp!= null)
+        { 
+            OnReplayCleanedUp.Invoke(this, EventArgs.Empty);
+        }
+
     }
 }
 [RequireComponent(typeof(AudioRecorderReplayer))]
@@ -1021,7 +1030,7 @@ public class RecorderReplayer : MonoBehaviour, IMessageRecorder
                     recorder.SaveRecordingInfo();
 
                     // stop replaying once recording stops as it does not make sense to see the old replay since there is already a new one
-                    // !!!! This gets never calles because replaying is set to false already in recRepMenu in the EndReplayAndCleanup!!!
+                    // !!!! This gets never called because replaying is set to false already in recRepMenu in the EndReplayAndCleanup!!!
                     //if (replaying)
                     {
                         replaying = false;

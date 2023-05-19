@@ -101,12 +101,8 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     // audio clip creation
     private float gain = 1.0f;
 
-    private int pointerLatency = (SAMPLINGFREQ / 1000) * LATENCY;
     private float replayLength;
     private List<float> frameTimes;
-    public UnityEngine.UI.RawImage waveFormTextureTest;
-    public UnityEngine.UI.RawImage texturePointerTest;
-
     private List<AudioIndicator> audioIndicators; // contain the RawImage components for the textures
     private List<Texture2D> waveformTextures;
     private List<Texture2D> pointersToSamples;
@@ -215,11 +211,10 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         
     }
 
-    public void SetLatencies()
+    public void SetLatencies(int currentLatency)
     {
         var i = 0;
         var r = replayedAudioSources.Count; // last index (because the last audio source is the one that got recorded first and has least latency)
-        var currentLatency = LATENCY;
         foreach (var item in replayedAudioSources)
         {
             //var latency = ComputeLatencySamples(latenciesMs[i]);
@@ -239,7 +234,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             }
             //var latency = ComputeLatencySamples(currentLatency);
 
-            if (item.Value.timeSamples > 0) // if clip was already playing but latency is adapted afterwards
+            if (item.Value.timeSamples > 0) // if clip was already playing but latency is adapted afterwards remove previous latency and add new latency
             {
                 var newTimeSamples = item.Value.timeSamples - clipNumberToLatency[item.Key] + latency;
                 item.Value.timeSamples = newTimeSamples;
@@ -767,7 +762,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
             }
             startReadingFromFile = false;
             
-            SetLatencies();
+            SetLatencies(LATENCY);
             // in experiment mode show all the audio indicators and markers
             if (recRep.experiment.mode == ReplayMode.SingleUser)
             {

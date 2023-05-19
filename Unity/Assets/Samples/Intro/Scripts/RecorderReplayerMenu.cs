@@ -14,6 +14,9 @@ public class RecorderReplayerMenu : MonoBehaviour
     public event EventHandler<bool> PlayPauseReplayEvent = delegate { };
     //private bool automatedReplay = false; // replays all the files in the directory one after the other (useful for gathering motion data post-hoc)
 
+    public AudioSource recordingOn;
+    public AudioSource recordingOff;
+
     public NetworkScene scene;
     public Sprite playSprite;
     public Sprite pauseSprite;
@@ -318,6 +321,8 @@ public class RecorderReplayerMenu : MonoBehaviour
         {
             if (recRep.recording) // if recording stop it
             {
+                // play recordingOff sound
+                recordingOff.Play();
                 Debug.Log("Toggle Record (STOP)");
 
                 EndRecordingAndCleanup();
@@ -330,6 +335,8 @@ public class RecorderReplayerMenu : MonoBehaviour
             }
             else // start recording
             {
+                // play sound
+                recordingOn.Play();
                 if (recRep.replaying) // if no replay is loaded we can record normally
                 {
                     if (recRep.experiment.mode == ReplayMode.SingleUser)

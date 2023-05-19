@@ -548,7 +548,7 @@ namespace Ubiq.Rooms
         /// </remarks>
         public void Connect(ConnectionDefinition connection)
         {
-            //context.scene.AddConnection(Connections.Resolve(connection));
+            context.scene.AddConnection(Connections.Resolve(connection)); //
         }
 
         private void Update()
