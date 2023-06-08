@@ -18,11 +18,14 @@ public class VRButton : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-       if (other.tag == "VRButton" && !deadTimeActive)
+       if (GetComponent<Renderer>().enabled == true)
        {
-            buttonSound.Play();
-            OnPress.Invoke(this, System.EventArgs.Empty);
-            Debug.Log("VR Button pressed!"); 
+        if (other.tag == "VRButton" && !deadTimeActive)
+        {
+                buttonSound.Play();
+                OnPress.Invoke(this, System.EventArgs.Empty);
+                Debug.Log("VR Button pressed!"); 
+        }
        }
     }
 

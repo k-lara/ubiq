@@ -7,6 +7,7 @@ public class Tape : MonoBehaviour, IGraspable
 {
 
     public TMPro.TextMeshProUGUI tapeName;
+    public bool attached = false;
 
     private VRRecorder vrRecorder;
     private Vector3 localGrabPoint;
@@ -14,7 +15,6 @@ public class Tape : MonoBehaviour, IGraspable
     private Transform handTransform; // controller transform of hand that has grabbed the object
     private bool isGrabbed = false;
     private bool inRange = false;
-    private bool attached = false;
 
     public string GetTapeName()
     {
@@ -23,6 +23,11 @@ public class Tape : MonoBehaviour, IGraspable
     public void SetTapeName(string name)
     {
         tapeName.text = name;
+    }
+
+    public void SetVRRecorder(VRRecorder recorder)
+    {
+        vrRecorder = recorder;
     }
 
     public void Grasp(Hand controller)
@@ -61,7 +66,8 @@ public class Tape : MonoBehaviour, IGraspable
             vrRecorder.AttachTape(this.gameObject);
         }
         handTransform = null;
-        isGrabbed = false;          
+        isGrabbed = false;   
+        transform.parent = vrRecorder.transform; // keeps the tapes with the recorder       
     }
 
     private void OnTriggerEnter(Collider other)

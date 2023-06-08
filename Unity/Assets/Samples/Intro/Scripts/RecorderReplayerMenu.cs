@@ -13,6 +13,7 @@ public class RecorderReplayerMenu : MonoBehaviour
 {
     public event EventHandler<bool> PlayPauseReplayEvent = delegate { };
     //private bool automatedReplay = false; // replays all the files in the directory one after the other (useful for gathering motion data post-hoc)
+    public event EventHandler<List<string>> OnGetReplaysFromDir = delegate { };
 
     public AudioSource recordingOn;
     public AudioSource recordingOff;
@@ -141,6 +142,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         recRep.replayer.OnLoadingReplay += Replayer_OnLoadingReplay;
 
         GetReplayFilesFromDir();
+        OnGetReplaysFromDir.Invoke(this, recordings);
         AddReplayFiles(needsUpdate);
     }
     private void Replayer_OnLoadingReplay(object sender, RecorderReplayerTypes.RecordingInfo e)
@@ -342,14 +344,14 @@ public class RecorderReplayerMenu : MonoBehaviour
                     if (recRep.experiment.mode == ReplayMode.SingleUser)
                     {
                         // always start at beginning of replay
-                        // always include replay start time too otherwise frame and time are not aligned and
-                        // frame independency is not guaranteed among other potentially annoying things!!!!
+                        // always include replay start time too otherwise frame and time are not aligned 
                         recRep.currentReplayFrame = 0;
                         recRep.replayingStartTime = 0.0f;
                         Debug.Log("Record Replay (Single User Mode)");
                         audioRecRep.PlayFromStartConsiderLatency(); // specific to this case
                         playPauseImage.sprite = pauseSprite;
                         playPauseText.text = "Pause";
+                        PlayPauseReplayEvent.Invoke(this, true);
                         recRep.play = true;
                         slider.interactable = false;
 
@@ -472,7 +474,7 @@ public class RecorderReplayerMenu : MonoBehaviour
         if (recRep.play) // if playing pause it
         {
             Debug.Log("Pause");
-            //OnPlayPauseReplay.Invoke(this, false);
+            // OnPlayPauseReplay.Invoke(this, false);
             audioRecRep.OnPlayPauseReplay(false);
             playPauseImage.sprite = playSprite;
             playPauseText.text = "Play";

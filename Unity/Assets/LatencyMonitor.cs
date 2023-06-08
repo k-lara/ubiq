@@ -17,6 +17,7 @@ public class LatencyMonitor : MonoBehaviour
     void Start()
     {
         LoadLatency();
+        
         slider.OnGrasp += SliderOnGrasp;
         slider.OnRelease += SliderOnRelease;
         slider.OnSliderChange += SliderOnSliderChange;
@@ -30,19 +31,36 @@ public class LatencyMonitor : MonoBehaviour
 
     private void SliderOnGrasp(object sender, EventArgs e)
     {
-        if (recorderReplayer.replaying && recorderReplayer.play)
+        if (recorderReplayer.roomClient.Me["creator"] == "1")
         {
-            recorderReplayer.menuRecRep.PlayPauseReplay();
+            if (recorderReplayer.replaying && recorderReplayer.play)
+            {
+                recorderReplayer.menuRecRep.PlayPauseReplay();
+            }
         }
     }
 
     private void SliderOnRelease(object sender, EventArgs e)
     {
-        recorderReplayer.audioRecRep.SetLatencies(latency);
-        if (recorderReplayer.replaying && !recorderReplayer.play)
+        if (recorderReplayer.roomClient.Me["creator"] == "1")
         {
-            recorderReplayer.menuRecRep.PlayPauseReplay();
+            if (recorderReplayer.replaying && !recorderReplayer.play)
+            {
+                Debug.Log("SliderOnRelease latency: " + latency);
+                recorderReplayer.audioRecRep.LATENCY = latency;
+                recorderReplayer.audioRecRep.SetLatencies(latency);
+                recorderReplayer.menuRecRep.PlayPauseReplay();
+            }
+            else
+            {
+                recorderReplayer.audioRecRep.LATENCY = latency;
+            }
         }
+    }
+
+    private void OnApplicationQuit()
+    {
+        SaveLatency();
     }
 
     // Update is called once per frame
@@ -54,10 +72,14 @@ public class LatencyMonitor : MonoBehaviour
     public void SaveLatency()
     {
         PlayerPrefs.SetInt("latency", latency);
+        PlayerPrefs.Save();
     }
 
     public void LoadLatency()
     {
-        latency = PlayerPrefs.GetInt("latency", 100);
+        latency = PlayerPrefs.GetInt("latency", 0);
+        recorderReplayer.audioRecRep.LATENCY = latency;
+        slider.SetSliderFromNormalizedValue((latency - minLatency)/(float)(maxLatency - minLatency));
+        tmpText.text = latency.ToString();
     }
 }

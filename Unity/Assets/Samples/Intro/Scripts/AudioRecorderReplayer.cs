@@ -17,7 +17,7 @@ using Ubiq.Samples;
 //[RequireComponent(typeof(RecorderReplayer))]
 public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComponent
 {
-    public const int LATENCY = 200; // ms
+    public int LATENCY = 200; // ms
     public const int SAMPLINGFREQ = 16000;
     public const int NUMSAMPLES = SAMPLINGFREQ; // * 2;
     public static bool MASTERONLY = false;
@@ -213,42 +213,39 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 
     public void SetLatencies(int currentLatency)
     {
-        var i = 0;
-        var r = replayedAudioSources.Count; // last index (because the last audio source is the one that got recorded first and has least latency)
-        foreach (var item in replayedAudioSources)
+        // especially in single-user mode we usually adjust latency after first recording of replay. 
+        // Then we also know the latency for subsequent recordings. and the initial 2 are already synced. 
+        // That means we only need to adjust latency for the last added audio clip.
+        // last index (because the last audio source is the one that got recorded first and has least latency)
+        // for (var i = 0; i < replayedAudioSources.Count; i++)
+        for (var i = 0; i < replayedAudioSources.Count; i++)
         {
-            //var latency = ComputeLatencySamples(latenciesMs[i]);
-            //int multiplier = Mathf.RoundToInt(Mathf.Pow(2.0f, r));
-            int latency = 0;
-            if (i == 0)
+            if (replayedAudioSources.TryGetValue((short)i, out AudioSource audioSource))
             {
-                latency = ComputeLatencySamples(currentLatency);
                 latenciesMs[i] = currentLatency;
+                // int multiplier = Mathf.RoundToInt(Mathf.Pow(2.0f, i));
+                int multiplier = 1; // add (which actually means move the clip forward by 1 latency to account for said latency) 
+                // 1 latency to every clip as even the initial one has already latency and to match with the audio indicators. (first is last in list)
+                if (i == replayedAudioSources.Count-1 && replayedAudioSources.Count > 1) // short 0 is position of oldest recording with least latency
+                {
+                    multiplier = 2;
+                }
+                var latencySamples = ComputeLatencySamples(currentLatency) * multiplier;
 
+                if (audioSource.timeSamples > 0) // if clip was already playing but latency is adapted afterwards remove previous latency and add new latency
+                {
+                    Debug.Log("Change latency during replay from " + clipNumberToLatency[(short)i] + " to " + latencySamples + " samples.");
+                    var newTimeSamples = audioSource.timeSamples - clipNumberToLatency[(short)i] + latencySamples;
+                    if(newTimeSamples < audioSource.clip.samples)
+                    {
+                        audioSource.timeSamples = newTimeSamples;
+                    } 
+                }
+                clipNumberToLatency[(short)i] = latencySamples;
+
+                // speech indicators need to know about latency too otherwise there is an error
+                speechIndicators[(short)i].SetLatencySamples(latencySamples);
             }
-            else
-            {
-                latency = ComputeLatencySamples(currentLatency);
-                latenciesMs[i] = currentLatency;
-
-            }
-            //var latency = ComputeLatencySamples(currentLatency);
-
-            if (item.Value.timeSamples > 0) // if clip was already playing but latency is adapted afterwards remove previous latency and add new latency
-            {
-                var newTimeSamples = item.Value.timeSamples - clipNumberToLatency[item.Key] + latency;
-                item.Value.timeSamples = newTimeSamples;
-            }
-            clipNumberToLatency[item.Key] = latency;
-
-            // speech indicators need to know about latency too otherwise there is an error
-            speechIndicators[item.Key].SetLatencySamples(latency);
-            if (r > 1) // the first one already has a bit of latency too!
-            {
-                r--;
-            }
-
-            i++;
         }
         SendAudioMessage(new AudioMessage() { messageId = 2, timeSamples = clipNumberToLatency.Values.ToArray(), muteClips = mute });
         Debug.Log("Latencies: " + string.Join(", ", latenciesMs));
@@ -457,9 +454,12 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
     }
     private void PlayAndConsiderLatency(AudioSource audioSource, int samples)
     {
+        audioSource.Stop(); // case something was still playing
+        audioSource.timeSamples = 0;
+        // Debug.Log(audioSource.timeSamples);
         audioSource.Play();
         audioSource.timeSamples = samples;
-        Debug.Log("Play and consider latency " + samples);
+        Debug.Log("Play and consider latency " + samples + " clip: " + audioSource.clip.name);
     }
 
     // this is used specifically for the single user case to make recordings of replays easier
@@ -778,17 +778,30 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                     Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
                     Texture2D texTransparent = new Texture2D(width, height, TextureFormat.RGBA32, false);
 
-                    var latency = clipNumberToLatency[item.Key];
-                    Debug.Log("Waveform Latency: " + latency + " clip: " + item.Key);
+                    // var latency = clipNumberToLatency[item.Key];
+                    // Debug.Log("Waveform Latency: " + latency + " clip: " + item.Key);
+                    // var latency = 0; // do not remove latency when clip = 0 as this is already correct, but remove latency for clips != 0
+                    // if (item.Key != 0)
+                    // {
+                    //     latency = LATENCY;
+                    // }
 
                     SetTextureBackground(tex, texTransparent, Color.clear, width, height);
-                    DrawWaveform(tex, texTransparent, item.Value.clip, latency,  width, height, playerCols[i%playerCols.Length]);
+                    // if (item.Key == (short)(replayedAudioSources.Count - 1) && replayedAudioSources.Count > 1)
+                    // {
+                    //     var generalLatency = ComputeLatencySamples(LATENCY);
+                    //     DrawWaveform(tex, texTransparent, item.Value.clip,  width, height, playerCols[i%playerCols.Length], generalLatency);
+                    // }
+                    // else
+                    {
+                        DrawWaveform(tex, texTransparent, item.Value.clip,  width, height, playerCols[i%playerCols.Length], 0);
+                    }
                 
                     // add finished texture to audioIndicators
                     audioIndicators[i].waveformTex.texture = waveformTextures[i];
                     audioIndicators[i].pointerTex.texture = pointersToSamples[i];
 
-                    Debug.Log("replay lenghts, motion, audio, samples/sec: " + replayLength + " " + item.Value.clip.length + " " +  item.Value.clip.samples/item.Value.clip.length);
+                    Debug.Log("clip replay lenghts, motion, audio, samples/sec:  clip: " + item.Value.clip.name + replayLength + " " + item.Value.clip.length + " " +  item.Value.clip.samples/item.Value.clip.length);
                     recRep.marker.CreateMarkerCanvas(item.Key, audioIndicators[i]);
                                 
                     i++;
@@ -811,7 +824,7 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         }
     }
 
-    public void DrawWaveform(Texture2D tex, Texture2D texTransparent, AudioClip clip, int latency, int width, int height, Color col)
+    public void DrawWaveform(Texture2D tex, Texture2D texTransparent, AudioClip clip, int width, int height, Color col, int latency)
     {
         //Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
         //Texture2D texTransparent = new Texture2D(width, height, TextureFormat.RGBA32, false);
@@ -825,9 +838,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
         float[] samples = new float[audioLength * clip.channels];
         float[] waveform = new float[width];
 
-        clip.GetData(samples, 0); // get samples for length of replayLength
+        clip.GetData(samples, latency); // get samples for length of replayLength but taking latency into account and starting with offset of latency
 
-        float packSize = ((float)samples.Length / (float)width);
+        float packSize = ((float)samples.Length) / (float)width;
         int s = 0;
 
         for (float i = 0; Mathf.RoundToInt(i) < samples.Length-packSize && s < waveform.Length; i+=packSize)
@@ -857,6 +870,42 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
 
         waveformTextures.Add(tex);
         pointersToSamples.Add(texTransparent);
+    }
+
+    List<float> pointersPackSize;
+    public void DrawPointerOnWaveform(int i, short clipNr, AudioSource source, int width, int height)
+    {
+        var tex = pointersToSamples[i];
+        var prev = prevPointerPos[i];
+
+        var packSizeAudio = source.clip.length / width;
+        // var packSize = replayLength / width;
+        // int pointerPos = Mathf.RoundToInt((frameTimes[recRep.currentReplayFrame]) / packSize);
+        // int pointerPos = Mathf.RoundToInt((source.time - (LATENCY/1000.0f)) / packSizeAudio); // ptr too early
+        // int pointerPos = Mathf.RoundToInt((source.time + (LATENCY/1000.0f)) / packSizeAudio); // ptr too late
+        var pointerPos = 0;
+        // if (clipNr == replayedAudioSources.Count-1)
+        // {
+        //     pointerPos = Mathf.RoundToInt((source.time - (LATENCY/1000.0f)) / packSizeAudio);
+        // }
+        // else
+        // {
+        pointerPos = Mathf.RoundToInt((source.time) / packSizeAudio); // slightly too late
+        // }
+
+        if (pointerPos >= 0 && pointerPos != prev)
+        {
+            //Debug.Log(prev + " " + height + " " + pointerColsClear.Length);
+            //Debug.Log(pointerPos + " " + height + " " + pointerCols.Length);
+
+            tex.SetPixels(prev, 0, thickness, height, pointerColsClear);
+            if (pointerPos < width-thickness)
+            {
+                tex.SetPixels(pointerPos, 0, thickness, height, pointerCols);
+                prevPointerPos[i] = pointerPos;
+            }
+            tex.Apply();
+        }
     }
 
     private const int MAXPCKGS = 48000;
@@ -921,42 +970,14 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                         var i = 0;
                         foreach (var item in replayedAudioSources)
                         {
-                            var latency = clipNumberToLatency[item.Key];
-                            DrawPointerOnWaveform(i, item.Value, width, height, latency);
+                            // var latency = clipNumberToLatency[item.Key];
+                            DrawPointerOnWaveform(i, item.Key, item.Value, width, height);
                             i++;
                         }
                     }
                 }
             }
             
-        }
-    }
-
-    List<float> pointersPackSize;
-    public void DrawPointerOnWaveform(int i, AudioSource source, int width, int height, int latency)
-    {
-        var tex = pointersToSamples[i];
-        var prev = prevPointerPos[i];
-        int latencySamples = source.clip.samples - latency;
-
-        //var packSize = (float)source.clip.samples / width;
-        //var packSize = (float)latencySamples / width; // latency considered NOTE no don't do it
-        var packSize = replayLength / width;
-
-        int pointerPos = Mathf.RoundToInt((frameTimes[recRep.currentReplayFrame]) / packSize);
-        //Debug.Log(pointerPos);
-        if (pointerPos != prev)
-        {
-            //Debug.Log(prev + " " + height + " " + pointerColsClear.Length);
-            //Debug.Log(pointerPos + " " + height + " " + pointerCols.Length);
-
-            tex.SetPixels(prev, 0, thickness, height, pointerColsClear);
-            if (pointerPos < width-thickness)
-            {
-                tex.SetPixels(pointerPos, 0, thickness, height, pointerCols);
-                prevPointerPos[i] = pointerPos;
-            }
-            tex.Apply();
         }
     }
 
@@ -1239,6 +1260,9 @@ public class AudioRecorderReplayer : MonoBehaviour, INetworkObject, INetworkComp
                 speechIndicators[item.Key].SetLatencySamples(m.timeSamples[i]);
                 i++;
             }
+            // set overall LATENCY (ms). all clips apart from the most recent one should have the overall latency so we can take any from the list but the first
+            LATENCY = m.timeSamples[1] / (SAMPLINGFREQ / 1000);
+
         }
         else if (m.messageId == (int)MessageType.PlayPause)
         {

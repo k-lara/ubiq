@@ -12,6 +12,7 @@ using UnityEngine;
 
 public class VRRecorder : MonoBehaviour
 {
+    public VRUtensilRenderer utensilRenderer;
     public RecorderReplayer recorderReplayer;
     public GameObject tapePrefab;
     public Transform tapeAttachmentPoint;
@@ -25,7 +26,7 @@ public class VRRecorder : MonoBehaviour
     private Tape tape;
     private VRButton vrButton;
 
-    private bool isReplaying = false; // is a replay loaded
+    private bool replayLoaded = false; // is a replay loaded
     private bool isPlaying = false; // is a replay playing
    
     void Start()
@@ -36,22 +37,70 @@ public class VRRecorder : MonoBehaviour
         detachSound = audioSources[1];
         vrButton.OnPress += VrButtonOnPress;
         recorderReplayer.recorder.OnRecordingStopped += RecorderOnRecordingStopped;
+        recorderReplayer.menuRecRep.PlayPauseReplayEvent += MenuRecRepOnPlayPauseReplayEvent;
+        recorderReplayer.menuRecRep.OnGetReplaysFromDir += MenuRecRepOnGetReplaysFromDir;
         rackSize = tapeRack.transform.childCount;
     }
 
-    // create new tape when recording is stopped
+    private void MenuRecRepOnGetReplaysFromDir(object sender, List<string> recordings)
+    {
+        foreach (var name in recordings)
+        {
+            var newTape = Instantiate(tapePrefab, tapeRack.transform.GetChild(tapeCount).position, tapeRack.transform.GetChild(tapeCount).rotation);
+            newTape.gameObject.transform.parent = tapeRack.transform.GetChild(tapeCount);
+
+            utensilRenderer.AddRenderers(newTape); // adds renderers and enables them depending on the visibility
+            newTape.GetComponent<Tape>().SetTapeName(name);
+            newTape.GetComponent<Tape>().SetVRRecorder(this);
+
+            // newTape.gameObject.transform.position = tapeRack.transform.GetChild(t).position;
+            // newTape.gameObject.transform.rotation = tapeRack.transform.GetChild(t).rotation;
+            tapeCount++;
+            if (tapeCount == rackSize)
+            {
+                tapeCount = 0;
+            }
+        }
+    }
+
+    private void MenuRecRepOnPlayPauseReplayEvent(object sender, bool isPlaying)
+    {
+        Debug.Log("VRRecorder: MenuRecRepOnPlayPauseReplayEvent: isPlaying: " + isPlaying);
+        this.isPlaying = isPlaying;
+    }
+
+    // create new tape when recording is stopped and put it in the recorder already.
+    // if the recorder is already full from a previous replay put the replay on the rack.
     private void RecorderOnRecordingStopped(object sender, EventArgs e)
     {
-        string newTapeName = Path.GetFileNameWithoutExtension(recorderReplayer.recordFile);
         var t = tapeCount % rackSize;
-        var newTape = Instantiate(tapePrefab, tapeRack.transform.GetChild(t).position, tapeRack.transform.GetChild(t).rotation);
-        newTape.transform.parent = tapeRack.transform.GetChild(t);
-        tapeCount++;
-        newTape.GetComponent<Tape>().SetTapeName(newTapeName);
-        if (tapeCount == rackSize)
+        // if replay was playing
+        if (tape != null)
         {
-            tapeCount = 0;
+            Debug.Log("Move tape to rack");
+            OnPause(); // replay is already paused as it is stopped automatically when recording is stopped (but here we just reset the class-internal variable)
+
+            // put current tape on rack and detach it from recorder
+            tape.attached = false;
+            tape.gameObject.transform.position = tapeRack.transform.GetChild(t).position;
+            tape.gameObject.transform.rotation = tapeRack.transform.GetChild(t).rotation;
+            tape.gameObject.transform.parent = tapeRack.transform.GetChild(t);
+            tapeCount++;
+            if (tapeCount == rackSize)
+            {
+                tapeCount = 0;
+            }
         }
+        replayLoaded = true; // because we automatically load a new replay when recording is stopped
+        // put new tape in recorder (which is actually a replayer...whatever >.<)
+        string newTapeName = Path.GetFileNameWithoutExtension(recorderReplayer.recordFile);
+        var newTape = Instantiate(tapePrefab, tapeAttachmentPoint.position, this.transform.rotation);
+        utensilRenderer.AddRenderers(newTape); // adds renderers and enables them depending on the visibility
+        newTape.transform.parent = this.transform;
+        newTape.GetComponent<Tape>().SetTapeName(newTapeName);
+        this.tape = newTape.GetComponent<Tape>(); // set new tape as current tape
+        this.tape.attached = true;
+        this.tape.SetVRRecorder(this);
         
     }
 
@@ -59,17 +108,15 @@ public class VRRecorder : MonoBehaviour
     private void VrButtonOnPress(object sender, EventArgs e)
     {
         // RecorderOnRecordingStopped(this, EventArgs.Empty); \\ just for testing
-        if (isPlaying) 
-            {
-                OnPause();
-            }
-            else 
-            {
-                OnPlay();
-            }
-
-
-        if (isReplaying)
+        // if (isPlaying) 
+        //     {
+        //         OnPause();
+        //     }
+        //     else 
+        //     {
+        //         OnPlay();
+        //     }
+        if (recorderReplayer.replaying)
         {
             if (isPlaying) // pause replay
             {
@@ -88,9 +135,10 @@ public class VRRecorder : MonoBehaviour
     {
         if (!recorderReplayer.recording && !isPlaying)
         {   
+            Debug.Log("Detach tape");
             this.tape = null;
             detachSound.Play();
-            // DeleteReplay();
+            DeleteReplay();
             return true;
         }
         else
@@ -106,10 +154,11 @@ public class VRRecorder : MonoBehaviour
             attachSound.Play();
             this.tape = tape.GetComponent<Tape>();
             tape.transform.position = tapeAttachmentPoint.position;
-            tape.transform.rotation = Quaternion.Euler(0, 0, 0);
+            tape.transform.rotation = this.transform.rotation;
+            tape.transform.parent = this.transform;
 
             // load replay
-            // LoadReplay();
+            LoadReplay();
         }
     }
 
@@ -129,22 +178,23 @@ public class VRRecorder : MonoBehaviour
         recorderReplayer.menuRecRep.SelectReplayFile(tape.GetTapeName());
         // load replay
         recorderReplayer.menuRecRep.ToggleReplay();
-        isReplaying = true;
+        replayLoaded = true;
     }
 
     public void DeleteReplay()
     {
-        if (isReplaying)
+        if (replayLoaded)
         {
+            Debug.Log("VRRecorder: DeleteReplay");
             recorderReplayer.menuRecRep.ToggleReplay();
-            isReplaying = false;
+            replayLoaded = false;
         }
     }
 
     void Update()
     {
         // rotate tape when being played
-        if (isPlaying)
+        if (tape != null && isPlaying)
         {
             tape.gameObject.transform.Rotate(-1.5f, 0, 0);
         }

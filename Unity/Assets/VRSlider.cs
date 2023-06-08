@@ -83,12 +83,17 @@ public class VRSlider : MonoBehaviour, IGraspable
     }
 
     public void Grasp(Hand controller)
-    {
+    {   
         Debug.Log("Grasp Slider");
         grabHandleSound.Play();
         isGrasped = true;
-        handTransform = controller.transform;
-        controller.gameObject.GetComponentInChildren<AvatarHintPositionRotation>().otherTransform = grabPoint;
+        handTransform = controller.transform;  
+        if (controller.gameObject.GetComponentInChildren<AvatarHintPositionRotation>().node == AvatarHints.NodePosRot.LeftHand)
+        {
+            grabPoint.Rotate(0f, 0f, 180f);
+        }
+            controller.gameObject.GetComponentInChildren<AvatarHintPositionRotation>().otherTransform = grabPoint;
+           
         OnGrasp.Invoke(this, EventArgs.Empty);
     }
 
@@ -98,6 +103,10 @@ public class VRSlider : MonoBehaviour, IGraspable
         releaseHandleSound.Play();
         isGrasped = false;
         handTransform = null;
+        if (controller.gameObject.GetComponentInChildren<AvatarHintPositionRotation>().node == AvatarHints.NodePosRot.LeftHand)
+        {
+            grabPoint.Rotate(0f, 0f, -180f);
+        }
         controller.gameObject.GetComponentInChildren<AvatarHintPositionRotation>().otherTransform = null;
         OnRelease.Invoke(this, EventArgs.Empty);
     }

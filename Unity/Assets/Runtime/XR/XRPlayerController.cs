@@ -27,6 +27,8 @@ namespace Ubiq.XR
         public Transform cameraContainer;
         public AnimationCurve cameraRubberBand;
 
+        public CharacterController characterController;
+
         private void Awake()
         {
             if(dontDestroyOnLoad)
@@ -44,6 +46,7 @@ namespace Ubiq.XR
             }
 
             handControllers = GetComponentsInChildren<HandController>();
+            characterController = GetComponent<CharacterController>();
         }
 
         private void RotateCamera(bool pressed)
@@ -56,6 +59,10 @@ namespace Ubiq.XR
 
         private void Start()
         {
+                // set size and initial position of character controller based on camera position
+            characterController.height = headCamera.transform.position.y - 0.1f;
+            characterController.center = new Vector3(headCamera.transform.position.x, characterController.height / 2f, headCamera.transform.position.z);
+
             foreach (var item in GetComponentsInChildren<TeleportRay>())
             {
                 item.OnTeleport.AddListener(OnTeleport);
@@ -109,12 +116,26 @@ namespace Ubiq.XR
         }
 
 
+        private Vector3 playerVelocity = Vector3.zero;
         private void FixedUpdate()
         {
             // Update the foot position. This is done by pulling the feet using a rubber band.
             // Decoupling the feet in this way allows the user to do things like lean over edges, when the ground check is enabled.
             // This can be effectively disabled by setting the animation curve to a constant high value.
-
+            if (characterController != null)
+            {
+                if (characterController.isGrounded)
+                {
+                    playerVelocity.y = 0f;
+                    characterController.height = headCamera.transform.localPosition.y - 0.01f;
+                    characterController.center = new Vector3(headCamera.transform.localPosition.x, characterController.height / 2f, headCamera.transform.localPosition.z);
+                }
+                else
+                {
+                    playerVelocity.y += -9.81f * Time.deltaTime;
+                    characterController.Move(playerVelocity * Time.deltaTime);
+                }
+            }
             foreach (var item in handControllers)
             {
                 if (item.Right)
@@ -135,10 +156,31 @@ namespace Ubiq.XR
                         var worldDir = headCamera.transform.TransformDirection(dir.x, 0, dir.y);
                         worldDir.y = 0;
                         var distance = (joystickFlySpeed * Time.deltaTime);
-                        transform.position += distance * worldDir.normalized;
+                        
+                        if (characterController != null)
+                        {
+                            // var move = distance * new Vector3(-dir.x, 0, dir.y);
+                            // Debug.Log(dir.ToString() + " " + Input.GetAxis("Vertical") + " " + Input.GetAxis("Horizontal"));
+                            // var move = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
+                            characterController.Move(distance * worldDir.normalized);   
+
+                            // if (move != Vector3.zero)
+                            // {
+                            //     transform.forward = move;
+                            // } 
+                        }
+                        else
+                        {
+                            transform.position += distance * worldDir.normalized;
+                        }
                     }
                 }
+                else
+                {
+                    
+                }
             }
+
 
             var headProjectionXZ = transform.InverseTransformPoint(headCamera.transform.position);
             headProjectionXZ.y = 0;

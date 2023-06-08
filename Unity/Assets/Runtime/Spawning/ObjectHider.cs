@@ -156,7 +156,15 @@ public class ObjectHider : MonoBehaviour, INetworkComponent, ILayer
 
         foreach (var child in childTransforms)
         {
-            child.gameObject.layer = layer;
+            if (layer == defaultLayer)
+            {
+                if (child.gameObject.layer != 11) // physics hands layer (must not be changed or character controller collider will not work anymore))
+                    child.gameObject.layer = layer;
+            }
+            else
+            {
+                child.gameObject.layer = layer;
+            }
         }
         // don't set this every frame if nothing changed
         if (previousLayer != layer)

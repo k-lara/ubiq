@@ -96,79 +96,19 @@ namespace Ubiq.Samples
 
         private void ThreePointTrackedAvatar_OnHeadUpdate(Vector3 pos, Quaternion rot)
         {
-            if (!avatar.IsLocal)
-            {
-                // if multiple messages arrive in one frame take the last one that came
-                if (firstPoseHead != null)
-                    secondPoseHead = new Message() { position = pos, rotation = rot, time = Time.unscaledTime};
-                //Debug.Log(avatar.IsLocal + " " + avatar.Id + " " + lastFrameHead + " " + Time.frameCount);
-
-                // this is to make sure that the torso is at the correct position and is not dragged after the head
-                if (recRep.replaying && !firstMessage)
-                {
-                    firstPoseHead = new Message() { position = pos, rotation = rot, time = Time.unscaledTime };
-                    head.position = pos;
-                    head.rotation = rot;
-                    Debug.Log("call: " + baseOfNeckHint.position.ToString());
-                    footPosition = baseOfNeckHint.position;
-                    var fwd = head.forward;
-                    fwd.y = 0;
-                    torsoFacing = Quaternion.LookRotation(fwd, Vector3.up);
-                    firstMessage = true;
-                }
-                //Debug.Log(pos.ToString());
-            }
-            else
-            {
-                head.position = pos;
-                head.rotation = rot;
-            }
+            head.position = pos;
+            head.rotation = rot;
         }
 
         private void ThreePointTrackedAvatar_OnLeftHandUpdate(Vector3 pos, Quaternion rot)
         {
-            if (!avatar.IsLocal)
-            {
-                if (recRep.replaying && !firstMessageLeft)
-                {
-                    firstPoseLeft = new Message() { position = pos, rotation = rot, time = Time.unscaledTime };
-                    leftHand.position = pos;
-                    leftHand.rotation = rot;
-                    firstMessageLeft = true;
-                }
-
-                if (firstPoseLeft != null)
-                     secondPoseLeft = new Message() { position = pos, rotation = rot, time = Time.unscaledTime };
-
-            }  
-            else
-            {
-                leftHand.position = pos;
-                leftHand.rotation = rot;
-            }
+            leftHand.position = pos;
+            leftHand.rotation = rot;
         }
         private void ThreePointTrackedAvatar_OnRightHandUpdate(Vector3 pos, Quaternion rot)
         {
-            //Debug.Log(avatar.IsLocal + " " + avatar.Id + " " + lastFrameHead + " " + Time.frameCount);
-
-            if (!avatar.IsLocal)
-            {
-                if (firstPoseRight != null) 
-                    secondPoseRight = new Message() { position = pos, rotation = rot, time = Time.unscaledTime };
-
-                if (recRep.replaying && !firstMessageRight)
-                {
-                    firstPoseRight = new Message() { position = pos, rotation = rot, time = Time.unscaledTime };
-                    rightHand.position = pos;
-                    rightHand.rotation = rot;
-                    firstMessageRight = true;
-                }
-            }
-            else
-            {
-                rightHand.position = pos;
-                rightHand.rotation = rot;
-            }
+            rightHand.position = pos;
+            rightHand.rotation = rot;
         }
 
         private void TexturedAvatar_OnTextureChanged(Texture2D tex)
